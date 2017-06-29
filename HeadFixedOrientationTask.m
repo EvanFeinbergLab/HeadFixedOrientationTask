@@ -54,7 +54,7 @@ Today = datetime('today'); DateFormat = 'mm-dd-yyyy_'; % Format of Session ID: m
 
 prompt = {'Mouse ID:',...
     'Session ID (MMDDYY_[initial][cohort]_[number][sex]):',...
-    'Session length (s):',... % How long user wants the session to run
+    'Session length (min):',... % How long user wants the session to run
     'Mininum ITI length (s):',... % Minimum inter-trial interval (ITI) length, want to decrease once mouse is accustomed
     'Maximum ITI length (s):',... % Maximum ITI length
     'Timeout threshold (s):',... % Length of time after which trial will be marked incorrect
@@ -68,20 +68,20 @@ prompt = {'Mouse ID:',...
     'LED pulse length (s):',... % How long the LED will flash
     'Solenoid pulse length (s):'}; % How long the solenoid will keep the valve open
 
-defaultans = {'AYK',... % Mouse ID
+defaultans = {'',... % Mouse ID
     datestr(Today, DateFormat),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
-    '3600',... % Session Length
-    '3',... % Mininum ITI length (s)
-    '5',... % Maximum ITI length (s)
-    '8',... % Timeout threshold (s)
-    '30',... % OutRange degree threshold
+    '30',... % Session Length (min)
+    '2',... % Mininum ITI length (s)
+    '3',... % Maximum ITI length (s)
+    '2',... % Timeout threshold (s)
+    '12',... % OutRange degree threshold
     '0.1500',... % R/L bias threshold
     '12',... % Left side angle minimum
     '45',... % Left side angle maximum
     '-45',... % Right side angle minimum
     '-12',... % Right side angle maximum
-    '3',... % LED pulse intensity
-    '0.4',... % LED pulse length
+    '1',... % LED pulse intensity
+    '0.5',... % LED pulse length
     '0.35'}; % Solenoid pulse length
 
 dlg_title = 'Head-Fixed Orientation Task: User Inputs';
@@ -91,7 +91,7 @@ answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: pro
 j = 1;
 TrialData.MouseID = answer{j}; j = j + 1;
 TrialData.SessionID = answer{j}; j = j + 1;
-TrialData.SessionLength = str2double(answer{j}); j = j + 1;
+TrialData.SessionLength = (str2double(answer{j}) * 60); j = j + 1;
 TrialData.MinITI = str2double(answer{j}); j = j + 1;
 TrialData.MaxITI = str2double(answer{j}); j = j + 1;
 TrialData.TimeoutThreshold = str2double(answer{j}); j = j + 1;
