@@ -38,10 +38,10 @@ writeDigitalPin(a, 'D5', 0); % Reset LED to off mode
 writeDigitalPin(a, 'D6', 0); % Reset LED to off mode
 
 % --- Connect USB cameras
-FrontCamera = webcam(1);
-BackCamera = webcam(2);
-preview(FrontCamera);
-preview(BackCamera);
+%FrontCamera = webcam(1);
+%BackCamera = webcam(2);
+%preview(FrontCamera);
+%preview(BackCamera);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 	USER INPUT PROMPT: TRIAL INFORMATION & HARDWARE CONFIGURATION	%
@@ -53,7 +53,7 @@ Today = datetime('today'); DateFormat = 'mm-dd-yyyy_'; % Format of Session ID: m
 
 prompt = {'Mouse ID:',...
     'Session ID (MMDDYY_[initial][cohort]_[number][sex]):',...
-    'Session length (min):',... % How long user wants the session to run
+    'Session length (s):',... % How long user wants the session to run
     'Mininum ITI length (s):',... % Minimum inter-trial interval (ITI) length, want to decrease once mouse is accustomed
     'Maximum ITI length (s):',... % Maximum ITI length
     'Timeout threshold (s):',... % Length of time after which trial will be marked incorrect
@@ -65,24 +65,24 @@ prompt = {'Mouse ID:',...
     'R maximum angle (deg):',...
     'LED pulse intensity (1-5V):',... % How brightly the LED will flash
     'LED pulse length (s):',... % How long the LED will flash
-    'Forced standstill for initiation? (1 for yes, 2 for no):'... % Whether to require standing still to start new trial
+    'Force Standstill to start trials? (1 for yes):'... %Whether to require standing still to start new trial
     'Solenoid pulse length (s):'}; % How long the solenoid will keep the valve open
 
 defaultans = {'AYK',... % Mouse ID
     datestr(Today, DateFormat),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
-    '30',... % Session Length
-    '2',... % Mininum ITI length (s)
-    '3',... % Maximum ITI length (s)
-    '2',... % Timeout threshold (s)
-    '12',... % OutRange degree threshold
+    '3600',... % Session Length
+    '3',... % Mininum ITI length (s)
+    '5',... % Maximum ITI length (s)
+    '5',... % Timeout threshold (s)
+    '30',... % OutRange degree threshold
     '0.1500',... % R/L bias threshold
     '12',... % Left side angle minimum
     '45',... % Left side angle maximum
     '-45',... % Right side angle minimum
     '-12',... % Right side angle maximum
-    '1',... % LED pulse intensity
-    '0.5',... % LED pulse length
-    '2',... % Whether to require standing still to start new trial
+    '3',... % LED pulse intensity
+    '0.4',... % LED pulse length
+    ' ',... %Whether to require standing still to start new trial
     '0.35'}; % Solenoid pulse length
 
 dlg_title = 'Head-Fixed Orientation Task: User Inputs';
@@ -92,7 +92,7 @@ answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: pro
 j = 1;
 TrialData.MouseID = answer{j}; j = j + 1;
 TrialData.SessionID = answer{j}; j = j + 1;
-TrialData.SessionLength = (str2double(answer{j}) * 60); j = j + 1;
+TrialData.SessionLength = str2double(answer{j}); j = j + 1;
 TrialData.MinITI = str2double(answer{j}); j = j + 1;
 TrialData.MaxITI = str2double(answer{j}); j = j + 1;
 TrialData.TimeoutThreshold = str2double(answer{j}); j = j + 1;
@@ -115,10 +115,10 @@ fprintf('BaudRate of Encoder (bits/s): %d \n', s.BaudRate);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % --- Set figure properties
-CurrentTrialData = figure;
-    CurrentTrialData.Name = strcat(TrialData.SessionID, ' Current Session Data');
-    CurrentTrialData.NumberTitle = 'off';
-    CurrentTrialData.Position = [500 500 500 500];
+%CurrentTrialData = figure;
+%    CurrentTrialData.Name = strcat(TrialData.SessionID, ' Current Session Data');
+%    CurrentTrialData.NumberTitle = 'off';
+%    CurrentTrialData.Position = [500 500 500 500];
 
 % --- Initialise program storage arrays (for Matlab program)
 i = 1; % Received bit number counter
@@ -166,7 +166,6 @@ TrialData.YDataRCorrect = []; % Overall displacement - R correct
 TrialData.YDataLCorrect = []; % Overall displacement - L correct
 TrialData.YDataRIncorrect = []; % Overall displacement - R incorrect
 TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 	EXECUTE HEAD-FIXED ORIENTATION TASK    %
@@ -235,28 +234,28 @@ while NewTime <= TrialData.SessionLength
     clear chktime;
     
     StartRoundCheck = TrialNumber;
-    MaxDurCheck = timer('TimerFcn', 'chktime = 8;', 'StartDelay', 8); % Starts timer to ensure that trial ends after 8 seconds
+    MaxDurCheck = timer('TimerFcn', 'chktime = TrialData.TimeoutThreshold;', 'StartDelay', TrialData.TimeoutThreshold); % Starts timer to ensure that trial ends after 8 seconds
     start(MaxDurCheck);
     
     FailIndicator = 0;
     SuccessIndicator = 0;
     PosInitial = 0; % Reset PosInitial to 0
-    clf
-    Displacement = subplot(1, 1, 1); % (m, n, p) - m = row, n = column, p = position
-    InitialiseX = 0:8; InitialiseY = zeros(1, 9);
-    DisplacementLine = line('XData', InitialiseX, 'YData', InitialiseY, 'Color', 'b'); % Re-initialise plot
-    xlabel('Time (seconds)'); ylabel('Displacement (\circ)');
-        Displacement.Box = 'off';
-        Displacement.XGrid = 'on'; Displacement.YGrid = 'on';
-        Displacement.XLim = [0 8];
-        Displacement.YLim = [-360 360];
-        Displacement.XTick = [0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0];
-        Displacement.XMinorTick = 'on';
-        Displacement.XTickLabel = {'0', '1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0'};
-        Displacement.YTick = [-360 -270 -180 -90 0 90 180 270 360];
-        Displacement.YTickLabel = {'-360\circ', '-270\circ', '-180\circ', '-90\circ', '0\circ', '90\circ', '180\circ', '270\circ', '360\circ'};
-    
-    flushinput(s); % Remove data from input buffer
+%     clf
+%     Displacement = subplot(1, 1, 1); % (m, n, p) - m = row, n = column, p = position
+%     InitialiseX = 0:8; InitialiseY = zeros(1, 9);
+%     DisplacementLine = line('XData', InitialiseX, 'YData', InitialiseY, 'Color', 'b'); % Re-initialise plot
+%     xlabel('Time (seconds)'); ylabel('Displacement (\circ)');
+%         Displacement.Box = 'off';
+%         Displacement.XGrid = 'on'; Displacement.YGrid = 'on';
+%         Displacement.XLim = [0 8];
+%         Displacement.YLim = [-360 360];
+%         Displacement.XTick = [0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0];
+%         Displacement.XMinorTick = 'on';
+%         Displacement.XTickLabel = {'0', '1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0'};
+%         Displacement.YTick = [-360 -270 -180 -90 0 90 180 270 360];
+%         Displacement.YTickLabel = {'-360\circ', '-270\circ', '-180\circ', '-90\circ', '0\circ', '90\circ', '180\circ', '270\circ', '360\circ'};
+%     
+%     flushinput(s); % Remove data from input buffer
     Time = NaN([1 2001]); Time(1) = TrialNumber; % Resets these arrays and assigns first bin to trial number
     StoreTime = Time;
     StoreAngle = Time;
@@ -271,6 +270,7 @@ while NewTime <= TrialData.SessionLength
         % --- Suppress unsuccessful read notes because it messes up the serial reading...
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
         ScanAngle = fscanf(s); % Serially read encoder output from Arduino
+        fprintf(ScanAngle)
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
         NewTime = toc(AllTimeStart); TrialData.AllTime = [TrialData.AllTime NewTime];
@@ -284,8 +284,11 @@ while NewTime <= TrialData.SessionLength
         end
 
         % --- Convert data from Arduino to double precision integer, if necessary.
+        
         EncoderPlot(i + 1) = ScanAngle;
 
+
+        
         % --- Draw real-time plot
         Time(i + 1) = toc(TrialStart);
         StoreTime(i + 1) = Time(i + 1);
@@ -293,12 +296,13 @@ while NewTime <= TrialData.SessionLength
         AngularDisplacement(i + 1) = StoreAngle(i + 1) - PosInitial; % Angular displacement
         PosFinal = StoreAngle(i + 1); % PosFinal is the latest angle value received at or before the moment of AngleAchieved = true
         i = i + 1; % Update bit number
-        set(DisplacementLine, 'XData', Time, 'YData', AngularDisplacement); % Draw angular displacement
-        drawnow % Force MATLAB to flush any queued displays
+        %set(DisplacementLine, 'XData', Time, 'YData', AngularDisplacement); % Draw angular displacement
+        %drawnow % Force MATLAB to flush any queued displays
         
-        if (SuccessIndicator == 1) && (NewTime(end) ~= TimeChangeCheck) && (TrialData.StandStillIndicator == 1)
-            stop(ITItimer);
-            start(ITItimer);        
+        if (SuccessIndicator == 1) && (abs(TrialData.AllScan(end) - PosChangeCheck) > 5) && (TrialData.StandStillIndicator == 1)
+            stop(ITITimer);
+            start(ITITimer);
+            PosChangeCheck = ScanAngle;
         end
         
         % --- If the mouse correctly completes the trial
@@ -326,10 +330,10 @@ while NewTime <= TrialData.SessionLength
                 % --- Set ITI length
                 ITI = datasample(TrialData.MinITI:TrialData.MaxITI, 1); % Randomly choose from user-specified range
                 TrialData.ITILengths = [TrialData.ITILengths, ITI]; % Append ITI to ITI array
-                ITITimer = timer('TimerFcn', 'SuccessIndicator = 3;', 'StartDelay' , ITI); % Pause for mouse to collect reward
-                start(ITITimer);
+                ITITimer = timer('TimerFcn', 'SuccessIndicator = 3;', 'StartDelay' , ITI); 
+                start(ITITimer); %Pause for mouse to collect reward
                 SuccessIndicator = 1; % In ITI
-                TimeChangeCheck = NewTime(end);
+                PosChangeCheck = ScanAngle;
             end
             
             if SuccessIndicator == 3 % ITI complete, about to move onto next trial
@@ -425,6 +429,9 @@ while NewTime <= TrialData.SessionLength
             
     end
     
+    writePWMVoltage(a, 'D5', 0);
+    writePWMVoltage(a, 'D6', 0);
+    
     % --- Update correct proportions
     TrialData.LSideProportion = [TrialData.LSideProportion, TrialData.LTrial / (TrialData.LTrial + TrialData.RTrial)];
     TrialData.RSideProportion = [TrialData.RSideProportion, TrialData.RTrial / (TrialData.LTrial + TrialData.RTrial)];
@@ -443,7 +450,7 @@ while NewTime <= TrialData.SessionLength
     i = 1; % Reset bit counter
     EncoderPlot = NaN(1, 2001); % Reset EncoderPlot
     StoreAngle = 0; % Reset angular displacement
-    delete(DisplacementLine); % Delete trial displacement to refresh plot
+    %delete(DisplacementLine); % Delete trial displacement to refresh plot
     TrialNumber = TrialNumber + 1; % Increment trial number
     
 end
@@ -454,7 +461,6 @@ TrialData.LCorrectProb = TrialData.LCorrectProb(2:end);
 TrialData.AllTime = TrialData.AllTime(2:end);
 TrialData.AllScan = TrialData.AllScan(2:end);
 clear Procedure
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                   SUMMARY OF RESULTS                  %
@@ -483,7 +489,7 @@ fprintf('\n---ALL trials: %d', (1 - TrialData.CorrectProb(end)));
 fprintf('\n---R-SIDE trials: %d, %.4f', length(find(TrialData.RCorrectIndex == 0)), (1 - TrialData.RCorrectProb(end)));
 fprintf('\n---L-SIDE trials: %d, %.4f', length(find(TrialData.LCorrectIndex == 0)), (1 - TrialData.LCorrectProb(end)));
 fprintf('\n---TIMEOUT errors: %d, %.4f', length(find(TrialData.IncorrectType == 'T')), TrialData.TimeoutProportion);
-fprintf('\n---OUTRANGE errors: %d, %.4f\n', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion);
+fprintf('\n---OUTRANGE errors: %d, %.4f', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
