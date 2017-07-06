@@ -1,7 +1,7 @@
 function y = CorrectDirection(vector, Side)
  
     RecordedAngles = DeleteNaN(vector);
-    RecordedAngles = RecordedAngles(end - 5:end);
+    %RecordedAngles = RecordedAngles(end - 5:end);
     Derivatives = diff(RecordedAngles);
     CriticalDerivative = Derivatives(end);
     
