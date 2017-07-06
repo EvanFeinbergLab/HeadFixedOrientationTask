@@ -38,10 +38,11 @@ writeDigitalPin(a, 'D5', 0); % Reset LED to off mode
 writeDigitalPin(a, 'D6', 0); % Reset LED to off mode
 
 % --- Connect USB cameras
-%FrontCamera = webcam(1);
-%BackCamera = webcam(2);
-%preview(FrontCamera);
-%preview(BackCamera);
+FrontCamera = webcam(1);
+BackCamera = webcam(2);
+preview(FrontCamera);
+preview(BackCamera);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 	USER INPUT PROMPT: TRIAL INFORMATION & HARDWARE CONFIGURATION	%
@@ -64,7 +65,6 @@ prompt = {'Mouse ID:',...
     'R minimum angle (deg):',... % Right side angle range (< 0)
     'R maximum angle (deg):',...
     'LED pulse intensity (1-5V):',... % How brightly the LED will flash
-    'LED pulse length (s):',... % How long the LED will flash
     'Force Standstill to start trials? (1 for yes):'... % Whether to require standing still to start new trial
     'Solenoid pulse length (s):'}; % How long the solenoid will keep the valve open
 
@@ -73,17 +73,16 @@ defaultans = {'AYK',... % Mouse ID
     '3600',... % Session Length
     '3',... % Mininum ITI length (s)
     '5',... % Maximum ITI length (s)
-    '5',... % Timeout threshold (s)
+    '2',... % Timeout threshold (s)
     '12',... % OutRange degree threshold
-    '0.1500',... % R/L bias threshold
+    '0.2000',... % R/L bias threshold
     '12',... % Left side angle minimum
     '45',... % Left side angle maximum
     '-45',... % Right side angle minimum
     '-12',... % Right side angle maximum
     '1',... % LED pulse intensity
-    '0.4',... % LED pulse length
     ' ',... % Whether to require standing still to start new trial
-    '0.35'}; % Solenoid pulse length
+    '0.3'}; % Solenoid pulse length
 
 dlg_title = 'Head-Fixed Orientation Task: User Inputs';
 answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: prompt, dialogue title, # lines, default answers
@@ -103,7 +102,6 @@ TrialData.LMaxAngle = str2double(answer{j}); j = j + 1;
 TrialData.RMinAngle = str2double(answer{j}); j = j + 1;
 TrialData.RMaxAngle = str2double(answer{j}); j = j + 1;
 TrialData.LEDIntensity = str2double(answer{j}); j = j + 1;
-TrialData.LEDPulseLength = str2double(answer{j}); j = j + 1;
 TrialData.StandStillIndicator = str2double(answer{j}); j = j + 1; 
 TrialData.SolenoidPulseLength = str2double(answer{j});
 
@@ -134,9 +132,9 @@ CurrentTrialLength = 0; % Length of time taken to achieve angle
 TrialData.StimulusLocationNum = []; % -1 = L
                                     % +1 = R
 TrialData.StimulusLocationAlpha = []; % 'R' or 'L'
-TrialData.StimulusTypeNum = []; % 1 = random, 2 = forced
+TrialData.StimulusTypeNum = []; % 1 = random, 2 = biased
 TrialData.RandomProportion = []; % Proportion of randomly-triggered LED trials to total trials
-TrialData.ForcedProportion = []; % Proportion of forced-side LED trigger trials to total trials
+TrialData.BiasedProportion = []; % Proportion of biased-side LED trigger trials to total trials
 TrialData.TrialIndex = []; % Array of trial indices (to aid plotting)
 TrialData.RTrial = 0; % Trials in which R LED was triggered
 TrialData.LTrial = 0; % Number of trials in which L LED was triggered
@@ -167,7 +165,6 @@ TrialData.YDataLCorrect = []; % Overall displacement - L correct
 TrialData.YDataRIncorrect = []; % Overall displacement - R incorrect
 TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 	EXECUTE HEAD-FIXED ORIENTATION TASK    %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -185,14 +182,37 @@ TrialData.AllTime = 0;
 TrialData.AllScan = 0;
 NewTime = 0;
 
+if TrialData.StandStillIndicator == 1 
+    fprintf('\nStandstill required to initiate next round.\n'); 
+
+else
+    fprintf('\nStandstill not required.\n');
+
+end
+
 while NewTime <= TrialData.SessionLength
     
-    % --- Select stimulus side (R/L, random/forced)
-    [StimulusTypeNum, StimulusValue] = Coinflip(TrialData.RCorrectProb(end), TrialData.LCorrectProb(end), TrialNumber, TrialData.SideBiasThreshold);
+    % --- Select stimulus side (R/L, random/biased)
+    if TrialNumber > 20
+        Lproportion = (size(TrialData.XDataLCorrect, 1) + size(TrialData.XDataRIncorrect, 1))/(TrialNumber - 1);
+        StimulusTypeNum = 2; 
+        
+        if (Lproportion > (0.5 - (TrialData.SideBiasThreshold / 2))) && (Lproportion < (0.5 + (TrialData.SideBiasThreshold / 2)))
+            Lproportion = 0.5;
+            StimulusTypeNum = 1; 
+        end
+        
+    else
+        Lproportion = 0.5;
+        StimulusTypeNum = 1;
+    
+    end
+    
+    StimulusValue = Coinflip();
     fprintf('\nCurrent Trial: %d \n', TrialNumber); % Print current trial index to display
     
     % --- Trigger LED, assign variables
-    if StimulusValue < 0.5000 % left
+    if StimulusValue < (1 - Lproportion) % left
         writePWMVoltage(a, 'D6', TrialData.LEDIntensity);
         
         Side = -1; % Assign value to Side
@@ -219,9 +239,9 @@ while NewTime <= TrialData.SessionLength
         TrialData.RandomProportion = (length(find(TrialData.StimulusTypeNum == 1)) / length(TrialData.StimulusTypeNum));
     
     elseif StimulusTypeNum == 2
-        StimulusTypeAlpha = 'forced';
+        StimulusTypeAlpha = 'biased';
         TrialData.StimulusTypeNum = [TrialData.StimulusTypeNum, 2];
-        TrialData.ForcedProportion = (length(find(TrialData.StimulusTypeNum == 2)) / length(TrialData.StimulusTypeNum));
+        TrialData.BiasedProportion = (length(find(TrialData.StimulusTypeNum == 2)) / length(TrialData.StimulusTypeNum));
     
     end
     
@@ -257,7 +277,7 @@ while NewTime <= TrialData.SessionLength
 %         Displacement.YTickLabel = {'-360\circ', '-270\circ', '-180\circ', '-90\circ', '0\circ', '90\circ', '180\circ', '270\circ', '360\circ'};
 %     
 %     flushinput(s); % Remove data from input buffer
-    Time = NaN([1 2001]); Time(1) = TrialNumber; % Resets these arrays and assigns first bin to trial number
+    Time = NaN([1 5001]); Time(1) = TrialNumber; % Resets these arrays and assigns first bin to trial number
     StoreTime = Time;
     StoreAngle = Time;
     AngularDisplacement = Time;
@@ -266,12 +286,12 @@ while NewTime <= TrialData.SessionLength
     
     TrialStart = tic; % Start/reset timer for trial length
 
-    while i <= 2000
+    while NewTime <= (TrialData.SessionLength+100)
         
         % --- Suppress unsuccessful read notes because it messes up the serial reading...
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
         ScanAngle = fscanf(s); % Serially read encoder output from Arduino
-        fprintf(ScanAngle)
+        %fprintf(ScanAngle)
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
         NewTime = toc(AllTimeStart); TrialData.AllTime = [TrialData.AllTime NewTime];
@@ -285,11 +305,8 @@ while NewTime <= TrialData.SessionLength
         end
 
         % --- Convert data from Arduino to double precision integer, if necessary.
-        
         EncoderPlot(i + 1) = ScanAngle;
 
-
-        
         % --- Draw real-time plot
         Time(i + 1) = toc(TrialStart);
         StoreTime(i + 1) = Time(i + 1);
@@ -300,7 +317,7 @@ while NewTime <= TrialData.SessionLength
         %set(DisplacementLine, 'XData', Time, 'YData', AngularDisplacement); % Draw angular displacement
         %drawnow % Force MATLAB to flush any queued displays
         
-        if (SuccessIndicator == 1) && (abs(TrialData.AllScan(end) - PosChangeCheck) > 5) && (TrialData.StandStillIndicator == 1)
+        if ((SuccessIndicator == 1) || (FailIndicator == 1)) && (abs(TrialData.AllScan(end) - PosChangeCheck) > 5) && (TrialData.StandStillIndicator == 1)
             stop(ITITimer);
             start(ITITimer);
             PosChangeCheck = ScanAngle;
@@ -324,9 +341,8 @@ while NewTime <= TrialData.SessionLength
                 writePWMVoltage(a, 'D3', 5);
                 SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, ''D3'', 0); SuccessIndicator = 2;', 'StartDelay', TrialData.SolenoidPulseLength); % Turns off solenoid after specific pulse length
                 start(SolenoidTimer);
-            end
             
-            if SuccessIndicator == 2 % Solenoid/ITI transition (i.e., after solenoid triggers, before ITI starts)
+            elseif SuccessIndicator == 2 % Solenoid/ITI transition (i.e., after solenoid triggers, before ITI starts)
             
                 % --- Set ITI length
                 ITI = datasample(TrialData.MinITI:TrialData.MaxITI, 1); % Randomly choose from user-specified range
@@ -335,15 +351,14 @@ while NewTime <= TrialData.SessionLength
                 start(ITITimer); %Pause for mouse to collect reward
                 SuccessIndicator = 1; % In ITI
                 PosChangeCheck = ScanAngle;
-            end
             
-            if SuccessIndicator == 3 % ITI complete, about to move onto next trial
+            elseif SuccessIndicator == 3 % ITI complete, about to move onto next trial
             
                 % --- Save current trial real-time plot & stimulus location
                 if Side == 1
 
-                    TrialData.YDataRCorrect = [TrialData.YDataRCorrect; EncoderPlot];
-                    TrialData.XDataRCorrect = [TrialData.XDataRCorrect; StoreTime]; % Update elapsed time array corresponding to angle
+                    TrialData.YDataRCorrect = [TrialData.YDataRCorrect; EncoderPlot(1:5001)];
+                    TrialData.XDataRCorrect = [TrialData.XDataRCorrect; StoreTime(1:5001)]; % Update elapsed time array corresponding to angle
                     TrialData.StimulusLocationAlpha = [TrialData.StimulusLocationAlpha, 'R'];
                     TrialData.StimulusLocationNum = [TrialData.StimulusLocationNum, 1];
                     TrialData.RTrial = TrialData.RTrial + 1;
@@ -351,8 +366,8 @@ while NewTime <= TrialData.SessionLength
 
                 elseif Side == -1
 
-                    TrialData.YDataLCorrect = [TrialData.YDataLCorrect; EncoderPlot];
-                    TrialData.XDataLCorrect = [TrialData.XDataLCorrect; StoreTime]; % Update elapsed time array corresponding to angle
+                    TrialData.YDataLCorrect = [TrialData.YDataLCorrect; EncoderPlot(1:5001)];
+                    TrialData.XDataLCorrect = [TrialData.XDataLCorrect; StoreTime(1:5001)]; % Update elapsed time array corresponding to angle
                     TrialData.StimulusLocationAlpha = [TrialData.StimulusLocationAlpha, 'L'];
                     TrialData.StimulusLocationNum = [TrialData.StimulusLocationNum, -1];
                     TrialData.LTrial = TrialData.LTrial + 1;
@@ -393,14 +408,15 @@ while NewTime <= TrialData.SessionLength
                 ITITimer = timer('TimerFcn', 'FailIndicator = 2;', 'StartDelay' , ITI); % Pause for mouse to collect reward
                 start(ITITimer);
                 FailIndicator = 1; % It has already passed through this step, should not pass through this loop again for this round
+                PosChangeCheck = ScanAngle;
             
             
             elseif FailIndicator == 2
                 
                 if Side == 1
 
-                    TrialData.YDataRIncorrect = [TrialData.YDataRIncorrect; EncoderPlot];
-                    TrialData.XDataRIncorrect = [TrialData.XDataRIncorrect; StoreTime]; % Update elapsed time array corresponding to angle
+                    TrialData.YDataRIncorrect = [TrialData.YDataRIncorrect; EncoderPlot(1:5001)];
+                    TrialData.XDataRIncorrect = [TrialData.XDataRIncorrect; StoreTime(1:5001)]; % Update elapsed time array corresponding to angle
                     TrialData.StimulusLocationAlpha = [TrialData.StimulusLocationAlpha, 'R'];
                     TrialData.StimulusLocationNum = [TrialData.StimulusLocationNum, 1];
                     TrialData.RTrial = TrialData.RTrial + 1;
@@ -409,8 +425,8 @@ while NewTime <= TrialData.SessionLength
 
                 elseif Side == -1
 
-                    TrialData.YDataLIncorrect = [TrialData.YDataLIncorrect; EncoderPlot];
-                    TrialData.XDataLIncorrect = [TrialData.XDataLIncorrect; StoreTime]; % Update elapsed time array corresponding to angle
+                    TrialData.YDataLIncorrect = [TrialData.YDataLIncorrect; EncoderPlot(1:5001)];
+                    TrialData.XDataLIncorrect = [TrialData.XDataLIncorrect; StoreTime(1:5001)]; % Update elapsed time array corresponding to angle
                     TrialData.StimulusLocationAlpha = [TrialData.StimulusLocationAlpha, 'L'];
                     TrialData.StimulusLocationNum = [TrialData.StimulusLocationNum, -1];
                     TrialData.LTrial = TrialData.LTrial + 1;
@@ -430,8 +446,7 @@ while NewTime <= TrialData.SessionLength
             
     end
     
-    writePWMVoltage(a, 'D5', 0);
-    writePWMVoltage(a, 'D6', 0);
+    writePWMVoltage(a, 'D5', 0); writePWMVoltage(a, 'D6', 0); % Ensure that LEDs have turned off, just in case
     
     % --- Update correct proportions
     TrialData.LSideProportion = [TrialData.LSideProportion, TrialData.LTrial / (TrialData.LTrial + TrialData.RTrial)];
@@ -449,7 +464,7 @@ while NewTime <= TrialData.SessionLength
     
     % --- Reset real-time plot
     i = 1; % Reset bit counter
-    EncoderPlot = NaN(1, 2001); % Reset EncoderPlot
+    EncoderPlot = NaN(1, 5001); % Reset EncoderPlot
     StoreAngle = 0; % Reset angular displacement
     %delete(DisplacementLine); % Delete trial displacement to refresh plot
     TrialNumber = TrialNumber + 1; % Increment trial number
@@ -463,6 +478,7 @@ TrialData.AllTime = TrialData.AllTime(2:end);
 TrialData.AllScan = TrialData.AllScan(2:end);
 clear Procedure
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                   SUMMARY OF RESULTS                  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -474,8 +490,8 @@ fprintf('\n---ALL trials: %d', TrialData.TrialIndex(end));
 fprintf('\n---R-SIDE trials: %d, %.4f', TrialData.RTrial(end), TrialData.RSideProportion(end));
 fprintf('\n---L-SIDE trials: %d, %.4f', TrialData.LTrial(end), TrialData.LSideProportion(end));
 fprintf('\n---RANDOM trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 1)), TrialData.RandomProportion(end));
-if isempty(TrialData.ForcedProportion)==0
-    fprintf('\n---FORCED trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 2)), TrialData.ForcedProportion(end));
+if isempty(TrialData.BiasedProportion)==0
+    fprintf('\n---BIASED trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 2)), TrialData.BiasedProportion(end));
 end
 
 % --- Correct result statistics
