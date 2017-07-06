@@ -65,7 +65,7 @@ prompt = {'Mouse ID:',...
     'R maximum angle (deg):',...
     'LED pulse intensity (1-5V):',... % How brightly the LED will flash
     'LED pulse length (s):',... % How long the LED will flash
-    'Force Standstill to start trials? (1 for yes):'... %Whether to require standing still to start new trial
+    'Force Standstill to start trials? (1 for yes):'... % Whether to require standing still to start new trial
     'Solenoid pulse length (s):'}; % How long the solenoid will keep the valve open
 
 defaultans = {'AYK',... % Mouse ID
@@ -74,15 +74,15 @@ defaultans = {'AYK',... % Mouse ID
     '3',... % Mininum ITI length (s)
     '5',... % Maximum ITI length (s)
     '5',... % Timeout threshold (s)
-    '30',... % OutRange degree threshold
+    '12',... % OutRange degree threshold
     '0.1500',... % R/L bias threshold
     '12',... % Left side angle minimum
     '45',... % Left side angle maximum
     '-45',... % Right side angle minimum
     '-12',... % Right side angle maximum
-    '3',... % LED pulse intensity
+    '1',... % LED pulse intensity
     '0.4',... % LED pulse length
-    ' ',... %Whether to require standing still to start new trial
+    ' ',... % Whether to require standing still to start new trial
     '0.35'}; % Solenoid pulse length
 
 dlg_title = 'Head-Fixed Orientation Task: User Inputs';
@@ -166,6 +166,7 @@ TrialData.YDataRCorrect = []; % Overall displacement - R correct
 TrialData.YDataLCorrect = []; % Overall displacement - L correct
 TrialData.YDataRIncorrect = []; % Overall displacement - R incorrect
 TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 	EXECUTE HEAD-FIXED ORIENTATION TASK    %
