@@ -24,7 +24,15 @@ clear all; close all; clc; delete(instrfind);
 SelectEncoderCOM = GetSerialPort;
 [EncoderSelection, n] = listdlg('PromptString', 'Select Encoder communication port:', 'SelectionMode', 'single', 'ListString', SelectEncoderCOM);
 COM_Encoder = cell2mat(SelectEncoderCOM(EncoderSelection));
-s = serial(COM_Encoder);
+e = serial(COM_Encoder);
+e.BaudRate = 115200;
+fopen(e); % Open serial communication with Encoder Arduino
+
+% --- Connect Sensor Arduino
+SelectSensorCOM = GetSerialPort;
+[SensorSelection, n] = listdlg('PromptString', 'Select Sensor communication port:', 'SelectionMode', 'single', 'ListString', SelectSensorCOM);
+COM_Sensor = cell2mat(SelectSensorCOM(SensorSelection));
+s = serial(COM_Sensor);
 s.BaudRate = 115200;
 fopen(s); % Open serial communication with Encoder Arduino
 
@@ -38,10 +46,10 @@ writeDigitalPin(a, 'D5', 0); % Reset LED to off mode
 writeDigitalPin(a, 'D6', 0); % Reset LED to off mode
 
 % --- Connect USB cameras
-FrontCamera = webcam(1);
-BackCamera = webcam(2);
-preview(FrontCamera);
-preview(BackCamera);
+%FrontCamera = webcam(1);
+%BackCamera = webcam(2);
+%preview(FrontCamera);
+%preview(BackCamera);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -105,7 +113,7 @@ TrialData.LEDIntensity = str2double(answer{j}); j = j + 1;
 TrialData.StandStillIndicator = str2double(answer{j}); j = j + 1; 
 TrialData.SolenoidPulseLength = str2double(answer{j});
 
-fprintf('BaudRate of Encoder (bits/s): %d \n', s.BaudRate);
+fprintf('BaudRate of Encoder (bits/s): %d \n', e.BaudRate);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -181,6 +189,8 @@ AllTimeStart = tic;
 TrialData.AllTime = 0;
 TrialData.AllScan = 0;
 NewTime = 0;
+
+TrialData.AllCapacitance = [];
 
 if TrialData.StandStillIndicator == 1 
     fprintf('\nStandstill required to initiate next round.\n'); 
@@ -283,6 +293,7 @@ while NewTime <= TrialData.SessionLength
     AngularDisplacement = Time;
     PosFinal = Time;
     EncoderPlot = Time; 
+    CapValues = Time; 
     
     TrialStart = tic; % Start/reset timer for trial length
 
@@ -290,7 +301,7 @@ while NewTime <= TrialData.SessionLength
         
         % --- Suppress unsuccessful read notes because it messes up the serial reading...
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        ScanAngle = fscanf(s); % Serially read encoder output from Arduino
+        ScanAngle = fscanf(e); % Serially read encoder output from Arduino
         %fprintf(ScanAngle)
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
@@ -316,6 +327,17 @@ while NewTime <= TrialData.SessionLength
         i = i + 1; % Update bit number
         %set(DisplacementLine, 'XData', Time, 'YData', AngularDisplacement); % Draw angular displacement
         %drawnow % Force MATLAB to flush any queued displays
+        
+        warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
+        Capacitance = fscanf(s);
+        warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
+
+        if ~isa(Capacitance, 'double')
+            Capacitance = str2double(Capacitance);
+        end
+
+        fprintf('Capacitance detected: %d\n', Capacitance);
+        CapValues(i + 1) = Capacitance;
         
         if ((SuccessIndicator == 1) || (FailIndicator == 1)) && (abs(TrialData.AllScan(end) - PosChangeCheck) > 5) && (TrialData.StandStillIndicator == 1)
             stop(ITITimer);
@@ -461,6 +483,9 @@ while NewTime <= TrialData.SessionLength
     fprintf('\nCorrect TOTAL probability: %.4f\n', TrialData.CorrectProb(end));
     fprintf('\nCorrect R-SIDE probability: %.4f\n', TrialData.RCorrectProb(end));
     fprintf('\nCorrect L-SIDE probability: %.4f\n\n----------------------------\n', TrialData.LCorrectProb(end));
+    
+    
+    TrialData.AllCapacitance = [TrialData.AllCapacitance CapValues(1:5001)]; % Update Capacitance Sensor Data storage
     
     % --- Reset real-time plot
     i = 1; % Reset bit counter
