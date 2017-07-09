@@ -24,26 +24,26 @@ clear all; close all; clc; delete(instrfind);
 SelectEncoderCOM = GetSerialPort;
 [EncoderSelection, n] = listdlg('PromptString', 'Select Encoder communication port:', 'SelectionMode', 'single', 'ListString', SelectEncoderCOM);
 COM_Encoder = cell2mat(SelectEncoderCOM(EncoderSelection));
-e = serial(COM_Encoder);
-e.BaudRate = 115200;
-fopen(e); % Open serial communication with Encoder Arduino
+EncoderArduino = serial(COM_Encoder);
+EncoderArduino.BaudRate = 115200;
+fopen(EncoderArduino); % Open serial communication with Encoder Arduino
 
-% --- Connect Sensor Arduino
+% --- Connect Lick Sensor Arduino
 SelectSensorCOM = GetSerialPort;
 [SensorSelection, n] = listdlg('PromptString', 'Select Sensor communication port:', 'SelectionMode', 'single', 'ListString', SelectSensorCOM);
 COM_Sensor = cell2mat(SelectSensorCOM(SensorSelection));
-s = serial(COM_Sensor);
-s.BaudRate = 115200;
-fopen(s); % Open serial communication with Encoder Arduino
+LickArduino = serial(COM_Sensor);
+LickArduino.BaudRate = 9600;
+fopen(LickArduino); % Open serial communication with Encoder Arduino
 
 % --- Connect LED & Solenoid Arduino
 BoardType = 'Uno'; 
 SelectLEDCOM = GetSerialPort;
 [LEDSelection, p] = listdlg('PromptString', 'Select LED & Solenoid communication port:', 'SelectionMode', 'single', 'ListString', SelectLEDCOM);
 COM_LED = cell2mat(SelectLEDCOM(LEDSelection));
-a = arduino(COM_LED, BoardType); % Establish hardware communication with LED & Solenoid Arduino
-writeDigitalPin(a, 'D5', 0); % Reset LED to off mode
-writeDigitalPin(a, 'D6', 0); % Reset LED to off mode
+LEDSolenoidArduino = arduino(COM_LED, BoardType); % Establish hardware communication with LED & Solenoid Arduino
+writeDigitalPin(LEDSolenoidArduino, 'D5', 0); % Reset LED to off mode
+writeDigitalPin(LEDSolenoidArduino, 'D6', 0); % Reset LED to off mode
 
 % --- Connect USB cameras
 %FrontCamera = webcam(1);
@@ -113,7 +113,7 @@ TrialData.LEDIntensity = str2double(answer{j}); j = j + 1;
 TrialData.StandStillIndicator = str2double(answer{j}); j = j + 1; 
 TrialData.SolenoidPulseLength = str2double(answer{j});
 
-fprintf('BaudRate of Encoder (bits/s): %d \n', e.BaudRate);
+fprintf('BaudRate of Encoder (bits/s): %d \n', EncoderArduino.BaudRate);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -182,7 +182,7 @@ TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
 
 %%% Self-initiation code will go here
 
-writePWMVoltage(a, 'D3', 5); pause(TrialData.SolenoidPulseLength); writePWMVoltage(a, 'D3', 0); % Freebie
+writePWMVoltage(LEDSolenoidArduino, 'D3', 5); pause(TrialData.SolenoidPulseLength); writePWMVoltage(LEDSolenoidArduino, 'D3', 0); % Freebie
 pause(2);
 
 AllTimeStart = tic; 
@@ -223,7 +223,7 @@ while NewTime <= TrialData.SessionLength
     
     % --- Trigger LED, assign variables
     if StimulusValue < (1 - Lproportion) % left
-        writePWMVoltage(a, 'D6', TrialData.LEDIntensity);
+        writePWMVoltage(LEDSolenoidArduino, 'D6', TrialData.LEDIntensity);
         
         Side = -1; % Assign value to Side
         DisplaySide = 'LEFT';
@@ -232,7 +232,7 @@ while NewTime <= TrialData.SessionLength
         AngleMax = TrialData.LMaxAngle;
         
     else % right
-        writePWMVoltage(a, 'D5', TrialData.LEDIntensity);
+        writePWMVoltage(LEDSolenoidArduino, 'D5', TrialData.LEDIntensity);
         
         Side = 1; % Assign value to Side
         DisplaySide = 'RIGHT';
@@ -301,7 +301,7 @@ while NewTime <= TrialData.SessionLength
         
         % --- Suppress unsuccessful read notes because it messes up the serial reading...
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        ScanAngle = fscanf(e); % Serially read encoder output from Arduino
+        ScanAngle = fscanf(EncoderArduino); % Serially read encoder output from Arduino
         %fprintf(ScanAngle)
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
@@ -329,7 +329,7 @@ while NewTime <= TrialData.SessionLength
         %drawnow % Force MATLAB to flush any queued displays
         
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        Capacitance = fscanf(s);
+        Capacitance = fscanf(LickArduino);
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
         if ~isa(Capacitance, 'double')
@@ -358,9 +358,9 @@ while NewTime <= TrialData.SessionLength
                 SuccessIndicator = -1;
                 
                 % --- Trigger solenoid
-                writePWMVoltage(a, 'D5', 0);
-                writePWMVoltage(a, 'D6', 0);
-                writePWMVoltage(a, 'D3', 5);
+                writePWMVoltage(LEDSolenoidArduino, 'D5', 0);
+                writePWMVoltage(LEDSolenoidArduino, 'D6', 0);
+                writePWMVoltage(LEDSolenoidArduino, 'D3', 5);
                 SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, ''D3'', 0); SuccessIndicator = 2;', 'StartDelay', TrialData.SolenoidPulseLength); % Turns off solenoid after specific pulse length
                 start(SolenoidTimer);
             
@@ -410,8 +410,8 @@ while NewTime <= TrialData.SessionLength
             if FailIndicator == 0
                 
                 TrialStop = toc(TrialStart);
-                writePWMVoltage(a, 'D5', 0);
-                writePWMVoltage(a, 'D6', 0);
+                writePWMVoltage(LEDSolenoidArduino, 'D5', 0);
+                writePWMVoltage(LEDSolenoidArduino, 'D6', 0);
                 TrialData.CorrectIndex = [TrialData.CorrectIndex, 0];
                 TrialData.TrialLengths = [TrialData.TrialLengths, TrialStop]; % Update trial length array
                 
@@ -468,7 +468,7 @@ while NewTime <= TrialData.SessionLength
             
     end
     
-    writePWMVoltage(a, 'D5', 0); writePWMVoltage(a, 'D6', 0); % Ensure that LEDs have turned off, just in case
+    writePWMVoltage(LEDSolenoidArduino, 'D5', 0); writePWMVoltage(LEDSolenoidArduino, 'D6', 0); % Ensure that LEDs have turned off, just in case
     
     % --- Update correct proportions
     TrialData.LSideProportion = [TrialData.LSideProportion, TrialData.LTrial / (TrialData.LTrial + TrialData.RTrial)];
@@ -515,7 +515,7 @@ fprintf('\n---ALL trials: %d', TrialData.TrialIndex(end));
 fprintf('\n---R-SIDE trials: %d, %.4f', TrialData.RTrial(end), TrialData.RSideProportion(end));
 fprintf('\n---L-SIDE trials: %d, %.4f', TrialData.LTrial(end), TrialData.LSideProportion(end));
 fprintf('\n---RANDOM trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 1)), TrialData.RandomProportion(end));
-if isempty(TrialData.BiasedProportion)==0
+if isempty(TrialData.BiasedProportion) == 0
     fprintf('\n---BIASED trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 2)), TrialData.BiasedProportion(end));
 end
 
@@ -531,7 +531,7 @@ fprintf('\n---ALL trials: %d', (1 - TrialData.CorrectProb(end)));
 fprintf('\n---R-SIDE trials: %d, %.4f', length(find(TrialData.RCorrectIndex == 0)), (1 - TrialData.RCorrectProb(end)));
 fprintf('\n---L-SIDE trials: %d, %.4f', length(find(TrialData.LCorrectIndex == 0)), (1 - TrialData.LCorrectProb(end)));
 fprintf('\n---TIMEOUT errors: %d, %.4f', length(find(TrialData.IncorrectType == 'T')), TrialData.TimeoutProportion);
-fprintf('\n---OUTRANGE errors: %d, %.4f', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion);
+fprintf('\n---OUTRANGE errors: %d, %.4f\n', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
