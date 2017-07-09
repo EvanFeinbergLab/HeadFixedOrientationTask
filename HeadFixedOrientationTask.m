@@ -78,7 +78,7 @@ prompt = {'Mouse ID:',...
 
 defaultans = {'AYK',... % Mouse ID
     datestr(Today, DateFormat),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
-    '3600',... % Session Length
+    '1800',... % Session Length
     '3',... % Mininum ITI length (s)
     '5',... % Maximum ITI length (s)
     '2',... % Timeout threshold (s)
@@ -160,6 +160,7 @@ TrialData.RIncorrect = 0; % Number of R trials incorrectly performed
 TrialData.IncorrectType = []; % Incorrect trial labeled by timeout 'T' or OutRange 'O'
 TrialData.TimeoutProportion = []; % Proportion of timeout error trials to total incorrect trials
 TrialData.OutRangeProportion = []; % Proportion of outrange error trials to total incorrect trials
+TrialData.Lproportion = []; % Proportion of trials up to that point where left side was chosen (for bias correction)
 
 TrialData.TrialLengths = []; % Array of trial lengths (time taken to achieve correct angle)
 TrialData.ITILengths = []; % Array of ITIs
@@ -254,6 +255,8 @@ while NewTime <= TrialData.SessionLength
         TrialData.BiasedProportion = (length(find(TrialData.StimulusTypeNum == 2)) / length(TrialData.StimulusTypeNum));
     
     end
+    
+    TrialData.Lproportion = [TrialData.Lproportion Lproportion];
     
     fprintf('\nStimulus Side & Type: %s, %s \n', DisplaySide, StimulusTypeAlpha);
     
