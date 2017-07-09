@@ -25,3 +25,10 @@ void loop()
 
 
 }
+    int total = cs_7_6.capacitiveSensor(5);
+
+    Serial.print(total);                  // print sensor output 1
+    Serial.println("\t");
+
+    delay(10);                             // arbitrary delay to limit data to serial port 
+}
