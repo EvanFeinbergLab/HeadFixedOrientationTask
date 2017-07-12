@@ -1,4 +1,4 @@
-function SaveAndAssignDirectory_new(variable, UserID)
+function SaveAndAssignDirectory(variable, UserID)
 VariableString = variable; % name of variable to be saved
 FileNameString = variable; % name of file to be saved
 FileExtension = '.mat';
