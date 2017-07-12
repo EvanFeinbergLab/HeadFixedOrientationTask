@@ -42,6 +42,7 @@ SelectLEDCOM = GetSerialPort;
 [LEDSelection, p] = listdlg('PromptString', 'Select LED & Solenoid communication port:', 'SelectionMode', 'single', 'ListString', SelectLEDCOM);
 COM_LED = cell2mat(SelectLEDCOM(LEDSelection));
 LEDSolenoidArduino = arduino(COM_LED, BoardType); % Establish hardware communication with LED & Solenoid Arduino
+writeDigitalPin(LEDSolenoidArduino, 'D3', 0); % Reset Solenoid to off mode
 writeDigitalPin(LEDSolenoidArduino, 'D5', 0); % Reset LED to off mode
 writeDigitalPin(LEDSolenoidArduino, 'D6', 0); % Reset LED to off mode
 
@@ -60,6 +61,10 @@ global TrialData % Structure in which all variables of interest will be saved
 
 Today = datetime('today'); DateFormat = 'mm-dd-yyyy_'; % Format of Session ID: mm-dd-yyyy_MouseID
 
+UserID = questdlg('Whose cohort will be run today?', ...
+    'User ID', ...
+    'AYK', 'SZ', 'Test', 'Test');
+
 prompt = {'Mouse ID:',...
     'Session ID (MMDDYY_[initial][cohort]_[number][sex]):',...
     'Session length (s):',... % How long user wants the session to run
@@ -76,21 +81,21 @@ prompt = {'Mouse ID:',...
     'Force Standstill to start trials? (1 for yes):'... % Whether to require standing still to start new trial
     'Solenoid pulse length (s):'}; % How long the solenoid will keep the valve open
 
-defaultans = {'AYK',... % Mouse ID
+defaultans = {'',... % Mouse ID
     datestr(Today, DateFormat),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
     '1800',... % Session Length
     '3',... % Mininum ITI length (s)
     '5',... % Maximum ITI length (s)
     '2',... % Timeout threshold (s)
-    '12',... % OutRange degree threshold
-    '0.2000',... % R/L bias threshold
+    '30',... % OutRange degree threshold
+    '0.20',... % R/L bias threshold
     '12',... % Left side angle minimum
     '45',... % Left side angle maximum
     '-45',... % Right side angle minimum
     '-12',... % Right side angle maximum
     '1',... % LED pulse intensity
-    ' ',... % Whether to require standing still to start new trial
-    '0.3'}; % Solenoid pulse length
+    '0.3',... % Solenoid pulse length
+    ''}; % Whether to require standing still to start new trial
 
 dlg_title = 'Head-Fixed Orientation Task: User Inputs';
 answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: prompt, dialogue title, # lines, default answers
@@ -110,8 +115,8 @@ TrialData.LMaxAngle = str2double(answer{j}); j = j + 1;
 TrialData.RMinAngle = str2double(answer{j}); j = j + 1;
 TrialData.RMaxAngle = str2double(answer{j}); j = j + 1;
 TrialData.LEDIntensity = str2double(answer{j}); j = j + 1;
-TrialData.StandStillIndicator = str2double(answer{j}); j = j + 1; 
-TrialData.SolenoidPulseLength = str2double(answer{j});
+TrialData.SolenoidPulseLength = str2double(answer{j}); j = j + 1;
+TrialData.StandStillIndicator = str2double(answer{j});
 
 fprintf('BaudRate of Encoder (bits/s): %d \n', EncoderArduino.BaudRate);
 
@@ -160,7 +165,6 @@ TrialData.RIncorrect = 0; % Number of R trials incorrectly performed
 TrialData.IncorrectType = []; % Incorrect trial labeled by timeout 'T' or OutRange 'O'
 TrialData.TimeoutProportion = []; % Proportion of timeout error trials to total incorrect trials
 TrialData.OutRangeProportion = []; % Proportion of outrange error trials to total incorrect trials
-TrialData.Lproportion = []; % Proportion of trials up to that point where left side was chosen (for bias correction)
 
 TrialData.TrialLengths = []; % Array of trial lengths (time taken to achieve correct angle)
 TrialData.ITILengths = []; % Array of ITIs
@@ -173,6 +177,7 @@ TrialData.YDataRCorrect = []; % Overall displacement - R correct
 TrialData.YDataLCorrect = []; % Overall displacement - L correct
 TrialData.YDataRIncorrect = []; % Overall displacement - R incorrect
 TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 	EXECUTE HEAD-FIXED ORIENTATION TASK    %
@@ -256,8 +261,6 @@ while NewTime <= TrialData.SessionLength
     
     end
     
-    TrialData.Lproportion = [TrialData.Lproportion Lproportion];
-    
     fprintf('\nStimulus Side & Type: %s, %s \n', DisplaySide, StimulusTypeAlpha);
     
     % --- Initialise timer
@@ -339,7 +342,6 @@ while NewTime <= TrialData.SessionLength
             Capacitance = str2double(Capacitance);
         end
 
-        fprintf('Capacitance detected: %d\n', Capacitance);
         CapValues(i + 1) = Capacitance;
         
         if ((SuccessIndicator == 1) || (FailIndicator == 1)) && (abs(TrialData.AllScan(end) - PosChangeCheck) > 5) && (TrialData.StandStillIndicator == 1)
