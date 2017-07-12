@@ -1,8 +1,8 @@
-function SaveAndAssignDirectory(variable, UserID)
+function SaveAndAssignDirectory_new(variable, UserID)
 VariableString = variable; % name of variable to be saved
 FileNameString = variable; % name of file to be saved
 FileExtension = '.mat';
-
+ 
 % --- Folder Format = '[Grandparent]\[Parent]\[Child]'
 % --- Example: 'C:\HeadFixedTrials\071217_130030\AYK'
     % Grandparent Folder = 'C:\HeadFixedTrials'
@@ -10,7 +10,7 @@ FileExtension = '.mat';
     % Child Folder: 'AYK'
     
 % --- Grandparent Folder
-GrandparentFolder = 'C:\HeadFixedTrials';
+GrandparentFolder = 'C:\HeadFixedTrials\';
 
 % --- Parent Folder
 ParentFolder = datestr(now, 'mmddyy');
@@ -33,10 +33,10 @@ GPC_AlreadyExist = exist(FolderName_GPC, 'dir');
 
 if GPC_AlreadyExist == 0
     mkdir(FolderName_GPC);
-    save(fullfile(FolderName_GPC), strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
+    save(fullfile(FolderName_GPC, strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
 
 elseif GPC_AlreadyExist == 7
-    save(fullfile(FolderName_GPC), strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
+    save(fullfile(FolderName_GPC, strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
     
 end
 
