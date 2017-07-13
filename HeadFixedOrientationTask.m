@@ -14,37 +14,37 @@
 % OutRange.m: output = boolean
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 	ESTABLISH HARDWARE COMMUNICATION	%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                 ESTABLISH HARDWARE COMMUNICATION              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-clear all; close all; clc; delete(instrfind);
+clear all; close all; delete(instrfind); % Terminates any existing objective and/or serial communications
 
 % --- Connect Encoder Arduino
 SelectEncoderCOM = GetSerialPort;
 [EncoderSelection, n] = listdlg('PromptString', 'Select Encoder communication port:', 'SelectionMode', 'single', 'ListString', SelectEncoderCOM);
 COM_Encoder = cell2mat(SelectEncoderCOM(EncoderSelection));
-EncoderArduino = serial(COM_Encoder);
-EncoderArduino.BaudRate = 115200;
-fopen(EncoderArduino); % Open serial communication with Encoder Arduino
+ArduinoEncoder = serial(COM_Encoder);
+ArduinoEncoder.BaudRate = 115200;
+fopen(ArduinoEncoder); % Open serial communication with Encoder Arduino
 
 % --- Connect Lick Sensor Arduino
 SelectSensorCOM = GetSerialPort;
 [SensorSelection, n] = listdlg('PromptString', 'Select Sensor communication port:', 'SelectionMode', 'single', 'ListString', SelectSensorCOM);
 COM_Sensor = cell2mat(SelectSensorCOM(SensorSelection));
-LickArduino = serial(COM_Sensor);
-LickArduino.BaudRate = 9600;
-fopen(LickArduino); % Open serial communication with Encoder Arduino
+ArduinoLick = serial(COM_Sensor);
+ArduinoLick.BaudRate = 9600;
+fopen(ArduinoLick); % Open serial communication with Lick Sensor Arduino
 
-% --- Connect LED & Solenoid Arduino
+% --- Connect Stimulus (LED) & Solenoid Arduino
 BoardType = 'Uno'; 
 SelectLEDCOM = GetSerialPort;
 [LEDSelection, p] = listdlg('PromptString', 'Select LED & Solenoid communication port:', 'SelectionMode', 'single', 'ListString', SelectLEDCOM);
 COM_LED = cell2mat(SelectLEDCOM(LEDSelection));
-LEDSolenoidArduino = arduino(COM_LED, BoardType); % Establish hardware communication with LED & Solenoid Arduino
-writeDigitalPin(LEDSolenoidArduino, 'D3', 0); % Reset Solenoid to off mode
-writeDigitalPin(LEDSolenoidArduino, 'D5', 0); % Reset LED to off mode
-writeDigitalPin(LEDSolenoidArduino, 'D6', 0); % Reset LED to off mode
+ArduinoLEDSolenoid = arduino(COM_LED, BoardType); % Establish hardware communication with LED & Solenoid Arduino
+writeDigitalPin(ArduinoLEDSolenoid, 'D3', 0); % Reset Solenoid to off mode
+writeDigitalPin(ArduinoLEDSolenoid, 'D5', 0); % Reset LED to off mode
+writeDigitalPin(ArduinoLEDSolenoid, 'D6', 0); % Reset LED to off mode
 
 % --- Connect USB cameras
 %FrontCamera = webcam(1);
@@ -61,40 +61,41 @@ global TrialData % Structure in which all variables of interest will be saved
 
 Today = datetime('today'); DateFormat = 'mm-dd-yyyy_'; % Format of Session ID: mm-dd-yyyy_MouseID
 
-UserID = questdlg('Whose cohort will be run today?', ...
+TrialData.UserID = questdlg('Whose cohort will be run today?', ...
     'User ID', ...
-    'AYK', 'SZ', 'Test', 'Test');
+    'AYK', 'SZ', 'DT', 'Test', 'Test');
 
 prompt = {'Mouse ID:',...
     'Session ID (MMDDYY_[initial][cohort]_[number][sex]):',...
-    'Session length (s):',... % How long user wants the session to run
+    'Session length (min):',... % How long user wants the session to run
     'Mininum ITI length (s):',... % Minimum inter-trial interval (ITI) length, want to decrease once mouse is accustomed
     'Maximum ITI length (s):',... % Maximum ITI length
     'Timeout threshold (s):',... % Length of time after which trial will be marked incorrect
-    'OutRange threshold (deg):'... % The absolute value of the degree (in the wrong direction) past which a trial is marked wrong
+    'Outrange threshold (deg):'... % The absolute value of the degree (in the wrong direction) past which a trial is marked wrong
     'R/L bias threshold:'... % The maximum allowable difference between RCorrectProb and LCorrectProb before triggering consecutive opposite-side stimuli
     'L minimum angle (deg):',... % Left side angle range (> 0)
     'L maximum angle (deg):',...
     'R minimum angle (deg):',... % Right side angle range (< 0)
     'R maximum angle (deg):',...
     'LED pulse intensity (1-5V):',... % How brightly the LED will flash
-    'Force Standstill to start trials? (1 for yes):'... % Whether to require standing still to start new trial
-    'Solenoid pulse length (s):'}; % How long the solenoid will keep the valve open
+    'Solenoid pulse length (ms):',... % How long the solenoid will keep the valve open
+    'Force Standstill to start trials? (1 for yes):' % Whether to require standing still to start new trial
+    }; 
 
-defaultans = {'',... % Mouse ID
-    datestr(Today, DateFormat),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
-    '1800',... % Session Length
+defaultans = {TrialData.UserID... % Mouse ID
+    strcat(datestr(Today, DateFormat), '_', TrialData.UserID),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
+    '30',... % Session Length (min) - typically 30 for 2x training, 60 for 1x training
     '3',... % Mininum ITI length (s)
     '5',... % Maximum ITI length (s)
     '2',... % Timeout threshold (s)
-    '30',... % OutRange degree threshold
+    '20',... % OutRange degree threshold
     '0.20',... % R/L bias threshold
     '12',... % Left side angle minimum
     '45',... % Left side angle maximum
     '-45',... % Right side angle minimum
     '-12',... % Right side angle maximum
     '1',... % LED pulse intensity
-    '0.3',... % Solenoid pulse length
+    '300',... % Solenoid pulse length (ms)
     ''}; % Whether to require standing still to start new trial
 
 dlg_title = 'Head-Fixed Orientation Task: User Inputs';
@@ -102,9 +103,10 @@ answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: pro
 
 % Remember to str2double any quantitative inputs when calling them!
 j = 1;
+TrialData.UserID = answer{j}; j = j + 1;
 TrialData.MouseID = answer{j}; j = j + 1;
 TrialData.SessionID = answer{j}; j = j + 1;
-TrialData.SessionLength = str2double(answer{j}); j = j + 1;
+TrialData.SessionLength = (str2double(answer{j}) * 60); j = j + 1;
 TrialData.MinITI = str2double(answer{j}); j = j + 1;
 TrialData.MaxITI = str2double(answer{j}); j = j + 1;
 TrialData.TimeoutThreshold = str2double(answer{j}); j = j + 1;
@@ -115,15 +117,13 @@ TrialData.LMaxAngle = str2double(answer{j}); j = j + 1;
 TrialData.RMinAngle = str2double(answer{j}); j = j + 1;
 TrialData.RMaxAngle = str2double(answer{j}); j = j + 1;
 TrialData.LEDIntensity = str2double(answer{j}); j = j + 1;
-TrialData.SolenoidPulseLength = str2double(answer{j}); j = j + 1;
+TrialData.SolenoidPulseLength = (str2double(answer{j}) / 1000); j = j + 1;
 TrialData.StandStillIndicator = str2double(answer{j});
 
-fprintf('BaudRate of Encoder (bits/s): %d \n', EncoderArduino.BaudRate);
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 	INITIALISE DATA STRUCTURES	 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                     INITIALISE DATA STRUCTURES                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % --- Set figure properties
 %CurrentTrialData = figure;
@@ -134,77 +134,96 @@ fprintf('BaudRate of Encoder (bits/s): %d \n', EncoderArduino.BaudRate);
 % --- Initialise program storage arrays (for Matlab program)
 i = 1; % Received bit number counter
 
-Side = 0; % Which LED was triggered
-          % -1 = L
-          % +1 = R
+Side = 0; % Which LED was triggered: -1 = L, +1 = R
           
 TrialNumber = 1; % Trial index
 CurrentTrialLength = 0; % Length of time taken to achieve angle
 
 % --- Initialise file storage arrays (for post-trial analysis)
-TrialData.StimulusLocationNum = []; % -1 = L
-                                    % +1 = R
-TrialData.StimulusLocationAlpha = []; % 'R' or 'L'
-TrialData.StimulusTypeNum = []; % 1 = random, 2 = biased
-TrialData.RandomProportion = []; % Proportion of randomly-triggered LED trials to total trials
-TrialData.BiasedProportion = []; % Proportion of biased-side LED trigger trials to total trials
-TrialData.TrialIndex = []; % Array of trial indices (to aid plotting)
-TrialData.RTrial = 0; % Trials in which R LED was triggered
-TrialData.LTrial = 0; % Number of trials in which L LED was triggered
-TrialData.RSideProportion = []; % Proportion of trials in which R LED was triggered
-TrialData.LSideProportion = []; % Proportion of trials in which L LED was triggered
+% Trial information & statistics
+    TrialData.StimulusLocationNum = []; % -1 = L, +1 = R
+    TrialData.StimulusLocationAlpha = []; % 'R' or 'L'
+    TrialData.StimulusTypeNum = []; % 1 = random, 2 = biased
+    TrialData.RandomProportion = []; % Proportion of randomly-triggered LED trials to total trials
+    TrialData.BiasedProportion = []; % Proportion of biased-side LED trigger trials to total trials
+    TrialData.TrialIndex = []; % Array of trial indices (to aid plotting)
+    TrialData.RTrial = 0; % Trials in which R LED was triggered
+    TrialData.LTrial = 0; % Number of trials in which L LED was triggered
+    TrialData.RSideProportion = []; % Proportion of trials in which R LED was triggered
+    TrialData.LSideProportion = []; % Proportion of trials in which L LED was triggered
 
-TrialData.CorrectIndex = []; % Which trials were correctly performed
-TrialData.CorrectProb = []; % Proportion of trials correctly performed to total trials
-TrialData.RCorrectIndex = []; % R trials correctly performed
-TrialData.LCorrectIndex = []; % L trials correctly performed
-TrialData.RCorrectProb = 1; % Proportion of R trials correctly performed to total R trials
-TrialData.LCorrectProb = 1; % Proportion of L trials correctly performed to total L trials
-TrialData.LIncorrect = 0; % Number of L trials incorrectly performed
-TrialData.RIncorrect = 0; % Number of R trials incorrectly performed
-TrialData.IncorrectType = []; % Incorrect trial labeled by timeout 'T' or OutRange 'O'
-TrialData.TimeoutProportion = []; % Proportion of timeout error trials to total incorrect trials
-TrialData.OutRangeProportion = []; % Proportion of outrange error trials to total incorrect trials
+% Performance information & statistics
+    % Accuracy
+    TrialData.CorrectIndex = []; % Which trials were correctly performed
+    TrialData.CorrectProb = []; % Proportion of trials correctly performed to total trials
+    TrialData.RCorrectIndex = []; % R trials correctly performed
+    TrialData.LCorrectIndex = []; % L trials correctly performed
+    TrialData.RCorrectProb = 1; % Proportion of R trials correctly performed to total R trials
+    TrialData.LCorrectProb = 1; % Proportion of L trials correctly performed to total L trials
+    TrialData.LIncorrect = 0; % Number of L trials incorrectly performed
+    TrialData.RIncorrect = 0; % Number of R trials incorrectly performed
+    TrialData.IncorrectType = []; % Incorrect trial labeled by timeout 'T' or OutRange 'O'
+    TrialData.TimeoutProportion = []; % Proportion of timeout error trials to total incorrect trials
+    TrialData.OutRangeProportion = []; % Proportion of outrange error trials to total incorrect trials
+    
+    % Temporal
+    TrialData.TrialLengths = []; % Array of trial lengths (time taken to achieve correct angle)
+    TrialData.ITILengths = []; % Array of ITIs
+    
+    % Displacement
+    TrialData.XDataRCorrect = []; % Time Stamp - R correct
+    TrialData.XDataLCorrect = []; % Time Stamp - L correct
+    TrialData.XDataRIncorrect = []; % Time Stamp - R incorrect
+    TrialData.XDataLIncorrect = []; % Time Stamp - L incorrect
+    TrialData.YDataRCorrect = []; % Overall displacement - R correct
+    TrialData.YDataLCorrect = []; % Overall displacement - L correct
+    TrialData.YDataRIncorrect = []; % Overall displacement - R incorrect
+    TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
+    
+    % Licking
+    TrialData.RawCapacitance = []; % Raw capacitance
 
-TrialData.TrialLengths = []; % Array of trial lengths (time taken to achieve correct angle)
-TrialData.ITILengths = []; % Array of ITIs
 
-TrialData.XDataRCorrect = []; % Time Stamp - R correct
-TrialData.XDataLCorrect = []; % Time Stamp - L correct
-TrialData.XDataRIncorrect = []; % Time Stamp - R incorrect
-TrialData.XDataLIncorrect = []; % Time Stamp - L incorrect
-TrialData.YDataRCorrect = []; % Overall displacement - R correct
-TrialData.YDataLCorrect = []; % Overall displacement - L correct
-TrialData.YDataRIncorrect = []; % Overall displacement - R incorrect
-TrialData.YDataLIncorrect = []; % Overall displacement - L incorrect
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 	EXECUTE HEAD-FIXED ORIENTATION TASK    %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Start reading the encoder data. Store them in a format that is readable.
-% Update the appropriate arrays and counters.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%               EXECUTE HEAD-FIXED ORIENTATION TASK                %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Self-initiation code will go here
 
-writePWMVoltage(LEDSolenoidArduino, 'D3', 5); pause(TrialData.SolenoidPulseLength); writePWMVoltage(LEDSolenoidArduino, 'D3', 0); % Freebie
-pause(2);
+% --- Initiation (for now, freebie)
+writePWMVoltage(ArduinoLEDSolenoid, 'D3', 5);
+pause(TrialData.SolenoidPulseLength);
+writePWMVoltage(ArduinoLEDSolenoid, 'D3', 0);
+pause(3);
 
-AllTimeStart = tic; 
+AllTimeStart = tic;
 TrialData.AllTime = 0;
 TrialData.AllScan = 0;
 NewTime = 0;
 
-TrialData.AllCapacitance = [];
+% --- Display session information
+% Hardware configuration, sampling rate
+    fprintf('Baud rate of Encoder (bits/s): %d\n', ArduinoEncoder.BaudRate);
+    fprintf('Baud rate of Capacitive Sensor (bits/s): %d\n', ArduinoLick.BaudRate);
+    fprintf('LED intensity (0 - 5V): % d\n', TrialData.LEDIntensity);
+    fprintf('Solenoid pulse length: % d sec\n', TrialData.SolenoidPulseLength);
 
-if TrialData.StandStillIndicator == 1 
-    fprintf('\nStandstill required to initiate next round.\n'); 
-
-else
-    fprintf('\nStandstill not required.\n');
-
-end
+% Behavioural configuration
+    if TrialData.StandStillIndicator == 1 
+        fprintf('\nStandstill required to initiate next round.\n'); 
+    else
+        fprintf('\nStandstill not required.\n');
+    end
+    
+% Session information
+    fprintf('Mouse ID: %s\n', TrialData.MouseID);
+    fprintf('Session length: %d min\n', TrialData.SessionLength);
+    fprintf('ITI range: %d - %d sec\n', TrialData.MinITI, TrialData.MaxITI);
+    fprintf('Timeout threshold: %d sec\n', TrialData.TimeoutThreshold);
+    fprintf('Outrange threshold: %d sec\n', TrialData.OutRangeThreshold);
+    fprintf('Minimum displacement for correct trial: %d deg\n', TrialData.LMinAngle);
+    fprintf('Maximum side bias disparity: %d\n', TrialData.SideBiasThreshold);
+    
 
 while NewTime <= TrialData.SessionLength
     
@@ -229,7 +248,7 @@ while NewTime <= TrialData.SessionLength
     
     % --- Trigger LED, assign variables
     if StimulusValue < (1 - Lproportion) % left
-        writePWMVoltage(LEDSolenoidArduino, 'D6', TrialData.LEDIntensity);
+        writePWMVoltage(ArduinoLEDSolenoid, 'D6', TrialData.LEDIntensity);
         
         Side = -1; % Assign value to Side
         DisplaySide = 'LEFT';
@@ -238,7 +257,7 @@ while NewTime <= TrialData.SessionLength
         AngleMax = TrialData.LMaxAngle;
         
     else % right
-        writePWMVoltage(LEDSolenoidArduino, 'D5', TrialData.LEDIntensity);
+        writePWMVoltage(ArduinoLEDSolenoid, 'D5', TrialData.LEDIntensity);
         
         Side = 1; % Assign value to Side
         DisplaySide = 'RIGHT';
@@ -307,7 +326,7 @@ while NewTime <= TrialData.SessionLength
         
         % --- Suppress unsuccessful read notes because it messes up the serial reading...
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        ScanAngle = fscanf(EncoderArduino); % Serially read encoder output from Arduino
+        ScanAngle = fscanf(ArduinoEncoder); % Serially read encoder output from Arduino
         %fprintf(ScanAngle)
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
@@ -335,7 +354,7 @@ while NewTime <= TrialData.SessionLength
         %drawnow % Force MATLAB to flush any queued displays
         
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        Capacitance = fscanf(LickArduino);
+        Capacitance = fscanf(ArduinoLick);
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
         if ~isa(Capacitance, 'double')
@@ -363,10 +382,10 @@ while NewTime <= TrialData.SessionLength
                 SuccessIndicator = -1;
                 
                 % --- Trigger solenoid
-                writePWMVoltage(LEDSolenoidArduino, 'D5', 0);
-                writePWMVoltage(LEDSolenoidArduino, 'D6', 0);
-                writePWMVoltage(LEDSolenoidArduino, 'D3', 5);
-                SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, ''D3'', 0); SuccessIndicator = 2;', 'StartDelay', TrialData.SolenoidPulseLength); % Turns off solenoid after specific pulse length
+                writePWMVoltage(ArduinoLEDSolenoid, 'D5', 0);
+                writePWMVoltage(ArduinoLEDSolenoid, 'D6', 0);
+                writePWMVoltage(ArduinoLEDSolenoid, 'D3', 5);
+                SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoLEDSolenoid, ''D3'', 0); SuccessIndicator = 2;', 'StartDelay', TrialData.SolenoidPulseLength); % Turns off solenoid after specific pulse length
                 start(SolenoidTimer);
             
             elseif SuccessIndicator == 2 % Solenoid/ITI transition (i.e., after solenoid triggers, before ITI starts)
@@ -415,8 +434,8 @@ while NewTime <= TrialData.SessionLength
             if FailIndicator == 0
                 
                 TrialStop = toc(TrialStart);
-                writePWMVoltage(LEDSolenoidArduino, 'D5', 0);
-                writePWMVoltage(LEDSolenoidArduino, 'D6', 0);
+                writePWMVoltage(ArduinoLEDSolenoid, 'D5', 0);
+                writePWMVoltage(ArduinoLEDSolenoid, 'D6', 0);
                 TrialData.CorrectIndex = [TrialData.CorrectIndex, 0];
                 TrialData.TrialLengths = [TrialData.TrialLengths, TrialStop]; % Update trial length array
                 
@@ -424,10 +443,12 @@ while NewTime <= TrialData.SessionLength
                     fprintf('\nOutrange threshold of %d degrees in wrong direction exceeded. Moving onto next trial.\n', TrialData.OutRangeThreshold);
                     TrialData.IncorrectType = [TrialData.IncorrectType, 'O']; % Update incorrect type array
                     TrialData.OutRangeProportion = [TrialData.OutRangeProportion, (length(find(TrialData.IncorrectType == 'O')) / length(TrialData.IncorrectType))];
+                
                 else
                     fprintf('\nTimeout threshold of %d sec exceeded. Moving onto next trial.\n', TrialData.TimeoutThreshold);
                     TrialData.IncorrectType = [TrialData.IncorrectType, 'T']; % Update incorrect type array
                     TrialData.TimeoutProportion = [TrialData.TimeoutProportion, (length(find(TrialData.IncorrectType == 'T')) / length(TrialData.IncorrectType))];
+                
                 end
                 
                 ITI = datasample(TrialData.MinITI:TrialData.MaxITI, 1); % Randomly choose from user-specified range
@@ -473,7 +494,13 @@ while NewTime <= TrialData.SessionLength
             
     end
     
-    writePWMVoltage(LEDSolenoidArduino, 'D5', 0); writePWMVoltage(LEDSolenoidArduino, 'D6', 0); % Ensure that LEDs have turned off, just in case
+    % --- Shut off any stray power to LEDs & solenoid
+    writePWMVoltage(ArduinoLEDSolenoid, 'D3', 0); % Solenoid
+    writePWMVoltage(ArduinoLEDSolenoid, 'D5', 0); % R LED
+    writePWMVoltage(ArduinoLEDSolenoid, 'D6', 0);
+    
+    % --- Update capacitance array
+    TrialData.RawCapacitance = [TrialData.RawCapacitance CapValues(1:5001)];
     
     % --- Update correct proportions
     TrialData.LSideProportion = [TrialData.LSideProportion, TrialData.LTrial / (TrialData.LTrial + TrialData.RTrial)];
@@ -488,9 +515,6 @@ while NewTime <= TrialData.SessionLength
     fprintf('\nCorrect TOTAL probability: %.4f\n', TrialData.CorrectProb(end));
     fprintf('\nCorrect R-SIDE probability: %.4f\n', TrialData.RCorrectProb(end));
     fprintf('\nCorrect L-SIDE probability: %.4f\n\n----------------------------\n', TrialData.LCorrectProb(end));
-    
-    
-    TrialData.AllCapacitance = [TrialData.AllCapacitance CapValues(1:5001)]; % Update Capacitance Sensor Data storage
     
     % --- Reset real-time plot
     i = 1; % Reset bit counter
@@ -543,7 +567,7 @@ fprintf('\n---OUTRANGE errors: %d, %.4f\n', length(find(TrialData.IncorrectType 
 %            	SAVE DATA               %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-SaveAndAssignDirectory(TrialData);
+SaveAndAssignDirectory(TrialData, TrialData.UserID);
 
 h = msgbox('Session Complete');
 
