@@ -55,7 +55,7 @@ Today = datetime('today'); DateFormat = 'mm-dd-yyyy_'; % Format of Session ID: m
 
 TrialData.UserID = questdlg('Whose cohort will be run today?', ...
     'User ID', ...
-    'AYK', 'SZ', 'DT', 'Test', 'Test');
+    'AYK', 'SZ', 'DT', 'AYK');
 
 prompt = {'Mouse ID:',...
     'Session ID (MMDDYY_[initial][cohort]_[number][sex]):',...
@@ -95,7 +95,6 @@ answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: pro
 
 % Remember to str2double any quantitative inputs when calling them!
 j = 1;
-TrialData.UserID = answer{j}; j = j + 1;
 TrialData.MouseID = answer{j}; j = j + 1;
 TrialData.SessionID = answer{j}; j = j + 1;
 TrialData.SessionLength = (str2double(answer{j}) * 60); j = j + 1;
@@ -205,12 +204,12 @@ NewTime = 0;
     
 % Session information
     fprintf('Mouse ID: %s\n', TrialData.MouseID);
-    fprintf('Session length: %d min\n', TrialData.SessionLength);
+    fprintf('Session length: %d min\n', (TrialData.SessionLength / 60));
     fprintf('ITI range: %d - %d sec\n', TrialData.MinITI, TrialData.MaxITI);
     fprintf('Timeout threshold: %d sec\n', TrialData.TimeoutThreshold);
     fprintf('Outrange threshold: %d sec\n', TrialData.OutRangeThreshold);
     fprintf('Minimum displacement for correct trial: %d deg\n', TrialData.LMinAngle);
-    fprintf('Maximum side bias disparity: %d\n', TrialData.SideBiasThreshold);
+    fprintf('Maximum side bias disparity: %.4f\n', TrialData.SideBiasThreshold);
     
 
 while NewTime <= TrialData.SessionLength
@@ -329,7 +328,6 @@ while NewTime <= TrialData.SessionLength
 
         % --- Convert data from Arduino to double precision integer, if necessary.
         EncoderPlot(i + 1) = ScanAngle;
-        CapValues(i + 1) = Capacitance;
 
         % --- Draw real-time plot
         Time(i + 1) = toc(TrialStart);
