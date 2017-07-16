@@ -1,6 +1,6 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 	USER-DEFINED FUNCTIONS & NOTATIONS	%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%               USER-DEFINED FUNCTIONS & NOTATIONS              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % = regular comment
 %%% = future update
@@ -29,9 +29,9 @@ ArduinoEncoder.BaudRate = 115200;
 fopen(ArduinoEncoder); % Open serial communication with Encoder Arduino
 
 % --- Connect Lick Sensor Arduino
-SelectSensorCOM = GetSerialPort;
-[SensorSelection, n] = listdlg('PromptString', 'Select Sensor communication port:', 'SelectionMode', 'single', 'ListString', SelectSensorCOM);
-COM_Sensor = cell2mat(SelectSensorCOM(SensorSelection));
+SelectLickCOM = GetSerialPort;
+[SensorSelection, n] = listdlg('PromptString', 'Select Sensor communication port:', 'SelectionMode', 'single', 'ListString', SelectLickCOM);
+COM_Sensor = cell2mat(SelectLickCOM(SensorSelection));
 ArduinoLick = serial(COM_Sensor);
 ArduinoLick.BaudRate = 9600;
 fopen(ArduinoLick); % Open serial communication with Lick Sensor Arduino
@@ -322,17 +322,18 @@ while NewTime <= TrialData.SessionLength
     
     TrialStart = tic; % Start/reset timer for trial length
 
-    while NewTime <= (TrialData.SessionLength+100)
+    while NewTime <= (TrialData.SessionLength + 100)
         
         % --- Suppress unsuccessful read notes because it messes up the serial reading...
         warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        ScanAngle = fscanf(ArduinoEncoder); % Serially read encoder output from Arduino
-        %fprintf(ScanAngle)
+        ScanAngle = fscanf(ArduinoEncoder); % Serially read encoder output from ArduinoEncoder
+        Capacitance = fscanf(ArduinoLick); % Serially read capacitance reading from ArduinoLick
         warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
 
         NewTime = toc(AllTimeStart); TrialData.AllTime = [TrialData.AllTime NewTime];
         if ~isa(ScanAngle, 'double') 
-            ScanAngle = str2double(ScanAngle); 
+            ScanAngle = str2double(ScanAngle);
+            Capacitance = str2double(Capacitance);
         end
         TrialData.AllScan=[TrialData.AllScan ScanAngle];
         
@@ -342,6 +343,7 @@ while NewTime <= TrialData.SessionLength
 
         % --- Convert data from Arduino to double precision integer, if necessary.
         EncoderPlot(i + 1) = ScanAngle;
+        CapValues(i + 1) = Capacitance;
 
         % --- Draw real-time plot
         Time(i + 1) = toc(TrialStart);
@@ -352,16 +354,6 @@ while NewTime <= TrialData.SessionLength
         i = i + 1; % Update bit number
         %set(DisplacementLine, 'XData', Time, 'YData', AngularDisplacement); % Draw angular displacement
         %drawnow % Force MATLAB to flush any queued displays
-        
-        warning('off', 'MATLAB:serial:fscanf:unsuccessfulRead');
-        Capacitance = fscanf(ArduinoLick);
-        warning('on', 'MATLAB:serial:fscanf:unsuccessfulRead');
-
-        if ~isa(Capacitance, 'double')
-            Capacitance = str2double(Capacitance);
-        end
-
-        CapValues(i + 1) = Capacitance;
         
         if ((SuccessIndicator == 1) || (FailIndicator == 1)) && (abs(TrialData.AllScan(end) - PosChangeCheck) > 5) && (TrialData.StandStillIndicator == 1)
             stop(ITITimer);
@@ -401,7 +393,7 @@ while NewTime <= TrialData.SessionLength
             elseif SuccessIndicator == 3 % ITI complete, about to move onto next trial
             
                 % --- Save current trial real-time plot & stimulus location
-                if Side == 1
+                if Side == 1 % right
 
                     TrialData.YDataRCorrect = [TrialData.YDataRCorrect; EncoderPlot(1:5001)];
                     TrialData.XDataRCorrect = [TrialData.XDataRCorrect; StoreTime(1:5001)]; % Update elapsed time array corresponding to angle
@@ -410,7 +402,7 @@ while NewTime <= TrialData.SessionLength
                     TrialData.RTrial = TrialData.RTrial + 1;
                     TrialData.RCorrectIndex = [TrialData.RCorrectIndex, 1];
 
-                elseif Side == -1
+                elseif Side == -1 % left
 
                     TrialData.YDataLCorrect = [TrialData.YDataLCorrect; EncoderPlot(1:5001)];
                     TrialData.XDataLCorrect = [TrialData.XDataLCorrect; StoreTime(1:5001)]; % Update elapsed time array corresponding to angle
@@ -457,7 +449,6 @@ while NewTime <= TrialData.SessionLength
                 start(ITITimer);
                 FailIndicator = 1; % It has already passed through this step, should not pass through this loop again for this round
                 PosChangeCheck = ScanAngle;
-            
             
             elseif FailIndicator == 2
                 
@@ -541,26 +532,26 @@ clear Procedure
 fprintf('\nSUMMARY OF SESSION %s\n', TrialData.SessionID);
 fprintf('\nOVERALL (number, proportion)');
 fprintf('\n---ALL trials: %d', TrialData.TrialIndex(end));
-fprintf('\n---R-SIDE trials: %d, %.4f', TrialData.RTrial(end), TrialData.RSideProportion(end));
-fprintf('\n---L-SIDE trials: %d, %.4f', TrialData.LTrial(end), TrialData.LSideProportion(end));
-fprintf('\n---RANDOM trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 1)), TrialData.RandomProportion(end));
+fprintf('\n---R-SIDE trials: %d, %.3f', TrialData.RTrial(end), TrialData.RSideProportion(end));
+fprintf('\n---L-SIDE trials: %d, %.3f', TrialData.LTrial(end), TrialData.LSideProportion(end));
+fprintf('\n---RANDOM trials: %d, %.3f', length(find(TrialData.StimulusTypeNum == 1)), TrialData.RandomProportion(end));
 if isempty(TrialData.BiasedProportion) == 0
-    fprintf('\n---BIASED trials: %d, %.4f', length(find(TrialData.StimulusTypeNum == 2)), TrialData.BiasedProportion(end));
+    fprintf('\n---BIASED trials: %d, %.3f', length(find(TrialData.StimulusTypeNum == 2)), TrialData.BiasedProportion(end));
 end
 
 % --- Correct result statistics
 fprintf('\n\nCORRECT (number, proportion)');
-fprintf('\n---ALL trials: %d, %.4f', length(find(TrialData.CorrectIndex == 1)), TrialData.CorrectProb(end));
-fprintf('\n---R-SIDE trials: %d, %.4f', length(find(TrialData.RCorrectIndex == 1)), TrialData.RCorrectProb(end));
-fprintf('\n---L-SIDE trials: %d, %.4f', length(find(TrialData.LCorrectIndex == 1)), TrialData.LCorrectProb(end));
+fprintf('\n---ALL trials: %d, %.3f', length(find(TrialData.CorrectIndex == 1)), TrialData.CorrectProb(end));
+fprintf('\n---R-SIDE trials: %d, %.3f', length(find(TrialData.RCorrectIndex == 1)), TrialData.RCorrectProb(end));
+fprintf('\n---L-SIDE trials: %d, %.3f', length(find(TrialData.LCorrectIndex == 1)), TrialData.LCorrectProb(end));
 
 % --- Incorrect result statistics
 fprintf('\n\nINCORRECT (number, proportion)');
-fprintf('\n---ALL trials: %d', (1 - TrialData.CorrectProb(end)));
-fprintf('\n---R-SIDE trials: %d, %.4f', length(find(TrialData.RCorrectIndex == 0)), (1 - TrialData.RCorrectProb(end)));
-fprintf('\n---L-SIDE trials: %d, %.4f', length(find(TrialData.LCorrectIndex == 0)), (1 - TrialData.LCorrectProb(end)));
-fprintf('\n---TIMEOUT errors: %d, %.4f', length(find(TrialData.IncorrectType == 'T')), TrialData.TimeoutProportion);
-fprintf('\n---OUTRANGE errors: %d, %.4f\n', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion);
+fprintf('\n---ALL trials: %d, %.3f', length(find(TrialData.CorrectIndex == 0)), (1 - TrialData.CorrectProb(end)));
+fprintf('\n---R-SIDE trials: %d, %.3f', length(find(TrialData.RCorrectIndex == 0)), (1 - TrialData.RCorrectProb(end)));
+fprintf('\n---L-SIDE trials: %d, %.3f', length(find(TrialData.LCorrectIndex == 0)), (1 - TrialData.LCorrectProb(end)));
+fprintf('\n---TIMEOUT errors: %d, %.3f', length(find(TrialData.IncorrectType == 'T')), TrialData.TimeoutProportion(end));
+fprintf('\n---OUTRANGE errors: %d, %.3f\n', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion(end));
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
