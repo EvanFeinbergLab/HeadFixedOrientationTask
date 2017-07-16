@@ -63,7 +63,7 @@ Today = datetime('today'); DateFormat = 'mm-dd-yyyy_'; % Format of Session ID: m
 
 TrialData.UserID = questdlg('Whose cohort will be run today?', ...
     'User ID', ...
-    'AYK', 'SZ', 'DT', 'Test', 'Test');
+    'AYK', 'SZ', 'DT', 'AYK');
 
 prompt = {'Mouse ID:',...
     'Session ID (MMDDYY_[initial][cohort]_[number][sex]):',...
@@ -103,7 +103,6 @@ answer = inputdlg(prompt, dlg_title, 1, defaultans); % Syntax for arguments: pro
 
 % Remember to str2double any quantitative inputs when calling them!
 j = 1;
-TrialData.UserID = answer{j}; j = j + 1;
 TrialData.MouseID = answer{j}; j = j + 1;
 TrialData.SessionID = answer{j}; j = j + 1;
 TrialData.SessionLength = (str2double(answer{j}) * 60); j = j + 1;
