@@ -33,10 +33,10 @@ GPC_AlreadyExist = exist(FolderName_GPC, 'dir');
 
 if GPC_AlreadyExist == 0
     mkdir(FolderName_GPC);
-    save(fullfile(FolderName_GPC), strcat(FileHeader, '_', variable.MouseID, FileExtension), 'VariableString');
+    save(fullfile(FolderName_GPC, strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
 
 elseif GPC_AlreadyExist == 7
-    save(fullfile(FolderName_GPC), strcat(FileHeader, '_', variable.MouseID, FileExtension), 'VariableString');
+    save(fullfile(FolderName_GPC, strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
     
 end
 
