@@ -531,7 +531,9 @@ fprintf('\n\nINCORRECT (number, proportion)');
 fprintf('\n---ALL trials: %d, %.3f', length(find(TrialData.CorrectIndex == 0)), (1 - TrialData.CorrectProb(end)));
 fprintf('\n---R-SIDE trials: %d, %.3f', length(find(TrialData.RCorrectIndex == 0)), (1 - TrialData.RCorrectProb(end)));
 fprintf('\n---L-SIDE trials: %d, %.3f', length(find(TrialData.LCorrectIndex == 0)), (1 - TrialData.LCorrectProb(end)));
-fprintf('\n---TIMEOUT errors: %d, %.3f', length(find(TrialData.IncorrectType == 'T')), TrialData.TimeoutProportion(end));
+if isempty(find(TrialData.IncorrectType == 'T')) == 0
+    fprintf('\n---TIMEOUT errors: %d, %.3f', length(find(TrialData.IncorrectType == 'T')), TrialData.TimeoutProportion(end));
+end
 fprintf('\n---OUTRANGE errors: %d, %.3f\n', length(find(TrialData.IncorrectType == 'O')), TrialData.OutRangeProportion(end));
 
 
