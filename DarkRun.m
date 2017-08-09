@@ -9,7 +9,7 @@ a = arduino(COM_LED, BoardType); % Establish hardware communication with LED & S
 RLED = 'D5';
 LLED = 'D6';
 RSolenoid = 'D9';
-LSolenoid = 'D9';
+LSolenoid = 'D10';
 
 writePWMVoltage(a, RLED, 0); % Reset R LED to off mode
 writePWMVoltage(a, LLED, 0); % Reset L LED to off mode
