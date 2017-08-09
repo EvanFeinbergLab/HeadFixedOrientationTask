@@ -103,7 +103,7 @@ while toc(Procedure) <= TrialData.SessionLength
         writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, LLED, TrialData.LEDIntensity); start(LEDTimer);
         writePWMVoltage(a, RSolenoid, 5); writePWMVoltage(a, LSolenoid, 5); start(SolenoidTimer);
         Count = Count + 1;
-        fprintf('\n Stimuli count: %d', Count);
+        fprintf('\n Stimuli count: %d\n', Count);
         
         pause(TrialData.ITILength);
         
