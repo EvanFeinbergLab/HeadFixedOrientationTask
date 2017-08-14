@@ -124,12 +124,13 @@ while toc(Procedure) <= TrialData.SessionLength
         end
 
     elseif TrialData.AlternatingStimuliIndicator == 'n'
+    
+        LEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0); writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);
         
         if Count <= 3
             
             SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0); writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-            LEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0); writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);
-        
+            
             writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, LLED, TrialData.LEDIntensity); start(LEDTimer);
             writePWMVoltage(a, RSolenoid, 5); writePWMVoltage(a, LSolenoid, 5); start(SolenoidTimer);
             Count = Count + 1;
@@ -140,7 +141,6 @@ while toc(Procedure) <= TrialData.SessionLength
         else
             
             SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0); writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength / 2);
-            LEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0); writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);
             
             writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, LLED, TrialData.LEDIntensity); start(LEDTimer);
             writePWMVoltage(a, RSolenoid, 5); writePWMVoltage(a, LSolenoid, 5); start(SolenoidTimer);
