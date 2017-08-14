@@ -16,9 +16,9 @@ writePWMVoltage(a, LLED, 0); % Reset L LED to off mode
 writePWMVoltage(a, RSolenoid, 0); % Reset R solenoid to off mode
 writePWMVoltage(a, LSolenoid, 0); % Reset L solenoid to off mode
 
-% FrontCamera = webcam(1);
+FrontCamera = webcam(1);
 % BackCamera = webcam(2);
-% preview(FrontCamera); 
+preview(FrontCamera); 
 % preview(BackCamera);
 
 % --- Dark run parameters
@@ -42,8 +42,8 @@ prompt = {'Mouse ID',...
 defaultans = {TrialData.UserID... % Mouse ID
     strcat('DarkRun', '_', datestr(Today, DateFormat), '_', TrialData.UserID),... % Session ID format: MMDDYY_[initial][cohort]_[number][sex]
     '60',... % Session Length (min) - typically 60 for 1x training
-    '1',... % LED pulse intensity
-    '300',... % Solenoid pulse length (ms)
+    '0.10',... % LED pulse intensity
+    '100',... % Solenoid pulse length (ms)
     '30',... % ITI length (s)
     'y' % Alternate stimuli sides?
     }; 
@@ -68,44 +68,88 @@ RCount = 0;
 LCount = 0;
 Count = 0;
 
-RLEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0)', 'StartDelay', 0.500);
-RSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-LLEDTimer = timer('TimerFcn', 'writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);
-LSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-
-SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0); writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength / 2);
-LEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0); writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);
-
 while toc(Procedure) <= TrialData.SessionLength
     
     if TrialData.AlternatingStimuliIndicator == 'y'
         
-        writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, RSolenoid, 5);
-        fprintf('\n Stimuli side: RIGHT');
-        start(RLEDTimer); start(RSolenoidTimer);
-        RCount = RCount + 1;
-        fprintf('\n R stimuli count: %d', RCount);
-        fprintf('\n L stimuli count: %d\n', LCount);
+        RLEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0)', 'StartDelay', 0.500);
+        LLEDTimer = timer('TimerFcn', 'writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);        
         
-        pause(TrialData.ITILength);
-        
-        writePWMVoltage(a, LLED, TrialData.LEDIntensity); writePWMVoltage(a, LSolenoid, 5);
-        fprintf('\n Stimuli side: LEFT');
-        start(LLEDTimer); start(LSolenoidTimer);
-        LCount = LCount + 1;
-        fprintf('\n R stimuli count: %d', RCount);
-        fprintf('\n L stimuli count: %d\n', LCount);
-        
-        pause(TrialData.ITILength);
+        if (RCount <= 3) && (LCount <= 3)
+            
+            RSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0)', 'StartDelay', (TrialData.SolenoidPulseLength * 2));
+            LSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', (TrialData.SolenoidPulseLength * 2));
+            
+            writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, RSolenoid, 5);
+            fprintf('\n Stimuli side: RIGHT');
+            start(RLEDTimer); start(RSolenoidTimer);
+            RCount = RCount + 1;
+            fprintf('\n R stimuli count: %d', RCount);
+            fprintf('\n L stimuli count: %d\n', LCount);
+            
+            pause(TrialData.ITILength);
+            
+            writePWMVoltage(a, LLED, TrialData.LEDIntensity); writePWMVoltage(a, LSolenoid, 5);
+            fprintf('\n Stimuli side: LEFT');
+            start(LLEDTimer); start(LSolenoidTimer);
+            LCount = LCount + 1;
+            fprintf('\n R stimuli count: %d', RCount);
+            fprintf('\n L stimuli count: %d\n', LCount);
+            
+            pause(TrialData.ITILength);
+            
+        else
+            
+            RSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
+            LSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
+            
+            writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, RSolenoid, 5);
+            fprintf('\n Stimuli side: RIGHT');
+            start(RLEDTimer); start(RSolenoidTimer);
+            RCount = RCount + 1;
+            fprintf('\n R stimuli count: %d', RCount);
+            fprintf('\n L stimuli count: %d\n', LCount);
+
+            pause(TrialData.ITILength);
+
+            writePWMVoltage(a, LLED, TrialData.LEDIntensity); writePWMVoltage(a, LSolenoid, 5);
+            fprintf('\n Stimuli side: LEFT');
+            start(LLEDTimer); start(LSolenoidTimer);
+            LCount = LCount + 1;
+            fprintf('\n R stimuli count: %d', RCount);
+            fprintf('\n L stimuli count: %d\n', LCount);
+
+            pause(TrialData.ITILength);
+            
+        end
 
     elseif TrialData.AlternatingStimuliIndicator == 'n'
+    
+        LEDTimer = timer('TimerFcn', 'writePWMVoltage(a, RLED, 0); writePWMVoltage(a, LLED, 0)', 'StartDelay', 0.500);
         
-        writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, LLED, TrialData.LEDIntensity); start(LEDTimer);
-        writePWMVoltage(a, RSolenoid, 5); writePWMVoltage(a, LSolenoid, 5); start(SolenoidTimer);
-        Count = Count + 1;
-        fprintf('\n Stimuli count: %d\n', Count);
+        if Count <= 3
+            
+            SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0); writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
+            
+            writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, LLED, TrialData.LEDIntensity); start(LEDTimer);
+            writePWMVoltage(a, RSolenoid, 5); writePWMVoltage(a, LSolenoid, 5); start(SolenoidTimer);
+            Count = Count + 1;
+            fprintf('\n Stimuli count: %d\n', Count);
         
-        pause(TrialData.ITILength);
+            pause(TrialData.ITILength);
+            
+        else
+            
+            SolenoidTimer = timer('TimerFcn', 'writePWMVoltage(a, RSolenoid, 0); writePWMVoltage(a, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength / 2);
+            
+            writePWMVoltage(a, RLED, TrialData.LEDIntensity); writePWMVoltage(a, LLED, TrialData.LEDIntensity); start(LEDTimer);
+            writePWMVoltage(a, RSolenoid, 5); writePWMVoltage(a, LSolenoid, 5); start(SolenoidTimer);
+            Count = Count + 1;
+            fprintf('\n Stimuli count: %d\n', Count);
+        
+            pause(TrialData.ITILength);
+            
+        end
         
     end
     
