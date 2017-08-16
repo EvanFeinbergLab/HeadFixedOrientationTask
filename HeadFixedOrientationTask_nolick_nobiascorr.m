@@ -44,10 +44,10 @@ writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 0); % Reset R LED to off mode
 writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 0); % Reset L LED to off mode
 
 % --- Connect USB cameras
-FrontCamera = webcam(1);
-%BackCamera = webcam(2);
-preview(FrontCamera);
-%preview(BackCamera);
+% FrontCamera = webcam(1);
+% BackCamera = webcam(2);
+% preview(FrontCamera);
+% preview(BackCamera);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -121,11 +121,9 @@ TrialData.StandStillIndicator = str2double(answer{j});
 
 % --- Initialise program storage arrays (for Matlab program)
 i = 1; % Received bit number counter
-
 Side = 0; % Which LED was triggered: -1 = L, +1 = R
-          
 TrialNumber = 1; % Trial index
-CurrentTrialLength = 0; % Length of time taken to achieve angle
+CurrentTrialLength = 0; % Length of time (sec) taken to achieve angle
 
 % --- Initialise file storage arrays (for post-trial analysis)
 % Trial information & statistics
@@ -133,8 +131,9 @@ CurrentTrialLength = 0; % Length of time taken to achieve angle
     TrialData.StimulusLocationAlpha = []; % 'R' or 'L'
     TrialData.StimulusTypeNum = []; % 1 = random, 2 = biased
     TrialData.RandomProportion = []; % Proportion of randomly-triggered LED trials to total trials
+    TrialData.BiasedProportion = []; % Proportion of biased-side LED trigger trials to total trials
     TrialData.TrialIndex = []; % Array of trial indices (to aid plotting)
-    TrialData.RTrial = 0; % Trials in which R LED was triggered
+    TrialData.RTrial = 0; % Number of trials in which R LED was triggered
     TrialData.LTrial = 0; % Number of trials in which L LED was triggered
     TrialData.RSideProportion = []; % Proportion of trials in which R LED was triggered
     TrialData.LSideProportion = []; % Proportion of trials in which L LED was triggered
@@ -318,13 +317,17 @@ while NewTime <= TrialData.SessionLength
                 
                 % --- Trigger solenoid
                 if Side == -1
-                    writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, TrialData.SolenoidPulseLength);
-                    LSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 0); SuccessIndicator = 2;', 'StartDelay', TrialData.SolenoidPulseLength); % Turns off solenoid after specific pulse length
+                    LSolenoidTimer = timer;
+                        LSolenoidTimer.StartFcn = 'writePWMVoltage(ArduinoLEDSolenoid, LLED, 0); writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 5)';
+                        LSolenoidTimer.TimerFcn = 'writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 0); SuccessIndicator = 2;';
+                        LSolenoidTimer.StartDelay = TrialData.SolenoidPulseLength; % Turns off solenoid after specific pulse length
                     start(LSolenoidTimer);
                     
                 elseif Side == 1
-                    writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, TrialData.SolenoidPulseLength);
-                    RSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoREDSolenoid, RSolenoid, 0); SuccessIndicator = 2;', 'StartDelay', TrialData.SolenoidPulseLength); % Turns off solenoid after specific pulse length
+                    RSolenoidTimer = timer;
+                        RSolenoidTimer.StartFcn = 'writePWMVoltage(ArduinoLEDSolenoid, RLED, 0); writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 5)';
+                        RSolenoidTimer.TimerFcn = 'writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 0); SuccessIndicator = 2;';
+                        RSolenoidTimer.StartDelay = TrialData.SolenoidPulseLength; % Turns off solenoid after specific pulse length
                     start(RSolenoidTimer);
                     
                 end
@@ -484,7 +487,7 @@ TrialStats1(TrialData);
 
 
 
-SaveAndAssignDirectory(TrialData);
+SaveAndAssignDirectory(TrialData, TrialData.UserID);
 
 h = msgbox('Session Complete');
 
