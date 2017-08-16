@@ -174,17 +174,14 @@ CurrentTrialLength = 0; % Length of time taken to achieve angle
 
 %%% Self-initiation code will go here
 
-% --- Initialise timer
-RSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-LSolenoidTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-RLEDTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoLEDSolenoid, RLED, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-LLEDTimer = timer('TimerFcn', 'writePWMVoltage(ArduinoLEDSolenoid, LLED, 0)', 'StartDelay', TrialData.SolenoidPulseLength);
-
 % --- Initiation (for now, freebie)
-writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 5); writePWMVoltage(ArduinoLEDSolenoid, RLED, TrialData.LEDIntensity);
-writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 5); writePWMVoltage(ArduinoLEDSolenoid, LLED, TrialData.LEDIntensity);
-start(RSolenoidTimer); start(RLEDTimer);
-start(LSolenoidTimer); start(LLEDTimer);
+Freebie = timer;
+    Freebie.StartFcn = 'writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 5); writePWMVoltage(ArduinoLEDSolenoid, RLED, TrialData.LEDIntensity); writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 5); writePWMVoltage(ArduinoLEDSolenoid, LLED, TrialData.LEDIntensity)';
+    Freebie.TimerFcn = 'writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 0); writePWMVoltage(ArduinoLEDSolenoid, RLED, 0); writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 0); writePWMVoltage(ArduinoLEDSolenoid, LLED, 0)';
+    Freebie.StartDelay = TrialData.SolenoidPulseLength;
+
+start(Freebie);
+pause(2);
 
 AllTimeStart = tic;
 TrialData.AllTime = 0;
