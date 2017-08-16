@@ -19,7 +19,7 @@ ParentFolder = datestr(now, 'mmddyy');
 ChildFolder = UserID;
 
 % --- File header
-FileHeader = datestr(now, 'mmddyy_HHMMSS');
+FileHeader = datestr(now, 'mmddyy');
 
 % --- Grandparent-Parent Name
 FolderName_GP = strcat(GrandparentFolder, '\', ParentFolder);
