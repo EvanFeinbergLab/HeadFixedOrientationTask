@@ -478,7 +478,7 @@ clear Procedure
 %                   SUMMARY OF RESULTS                  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-TrialStats(TrialData);
+TrialStats1(TrialData);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
