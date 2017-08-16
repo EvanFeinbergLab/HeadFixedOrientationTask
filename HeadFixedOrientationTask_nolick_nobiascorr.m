@@ -44,9 +44,9 @@ writePWMVoltage(ArduinoLEDSolenoid, RSolenoid, 0); % Reset R LED to off mode
 writePWMVoltage(ArduinoLEDSolenoid, LSolenoid, 0); % Reset L LED to off mode
 
 % --- Connect USB cameras
-% FrontCamera = webcam(1);
+FrontCamera = webcam(1);
 % BackCamera = webcam(2);
-% preview(FrontCamera);
+preview(FrontCamera);
 % preview(BackCamera);
 
 
