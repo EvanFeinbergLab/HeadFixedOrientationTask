@@ -6,7 +6,7 @@ FileExtension = '.mat';
 % --- File path divider
 OS = computer;
 if contains(OS, 'PC')
-    FilePathDivider = FilePathDivider;
+    FilePathDivider = '\';
 elseif contains(OS, 'MAC')
     FilePathDivider = '/';
 end
