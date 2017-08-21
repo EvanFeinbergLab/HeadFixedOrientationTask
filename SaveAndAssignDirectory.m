@@ -1,46 +1,56 @@
-function SaveAndAssignDirectory(variable, UserID)
-VariableString = variable; % name of variable to be saved
-FileNameString = variable; % name of file to be saved
+function SaveAndAssignDirectory(TrialData)
+
+% --- File extension
 FileExtension = '.mat';
 
+% --- File path divider
+OS = computer;
+if contains(OS, 'PC')
+    FilePathDivider = FilePathDivider;
+elseif contains(OS, 'MAC')
+    FilePathDivider = '/';
+end
+
 % --- Folder Format = '[Grandparent]\[Parent]\[Child]'
-% --- Example: 'C:\HeadFixedTrials\071217_130030\AYK'
+% --- Example: 'C:\HeadFixedTrials\AYK\1-1M'
     % Grandparent Folder = 'C:\HeadFixedTrials'
-    % Parent Folder = '071217_130030'
-    % Child Folder: 'AYK'
+    % Parent Folder = 'AYK'
+    % Child Folder = '1-1M'
     
 % --- Grandparent Folder
-GrandparentFolder = 'C:\HeadFixedTrials';
+GrandparentFolder = 'C:\HeadFixedTrials\';
 
 % --- Parent Folder
-ParentFolder = datestr(now, 'mmddyy');
+ParentFolder = TrialData.UserID;
 
 % --- Child Folder
-ChildFolder = UserID;
-
-% --- File header
-FileHeader = datestr(now, 'mmddyy');
+ChildFolder = erase(TrialData.MouseID, TrialData.UserID);
 
 % --- Grandparent-Parent Name
-FolderName_GP = strcat(GrandparentFolder, '\', ParentFolder);
-FolderName_GPC = strcat(GrandparentFolder, '\', ParentFolder, '\', ChildFolder);
+FolderName = strcat(GrandparentFolder, FilePathDivider, ParentFolder, FilePathDivider, ChildFolder);
 
 % --- exist() (0 - no, 7 - yes)
-GP_AlreadyExist = exist(FolderName_GP, 'dir');
-GPC_AlreadyExist = exist(FolderName_GPC, 'dir');
+GPC_AlreadyExist = exist(FolderName, 'dir');
 
-% --- Make Parent and/or Child Folder
+% --- Determine day of training
+if length(dir(strcat(FolderName, FilePathDivider, '*.mat'))) == 0
+    DaysSoFar = '01';
+elseif (1 <= length(dir(strcat(FolderName, FilePathDivider, '*.mat')))) && (length(dir(strcat(FolderName, FilePathDivider, '*.mat'))) <= 8)
+    DaysSoFar = strcat('0', num2str((length(dir(strcat(FolderName, FilePathDivider, '*.mat')))) + 1));
+else length(dir(strcat(FolderName, FilePathDivider, '*.mat'))) > 8
+    DaysSoFar = num2str((length(dir(strcat(FolderName, FilePathDivider, '*.mat')))) + 1);
+end
 
+% --- Save!
 if GPC_AlreadyExist == 0
-    mkdir(FolderName_GPC);
-    save(fullfile(FolderName_GPC, strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
+    mkdir(FolderName);
+    save(fullfile(FolderName, strcat(TrialData.MouseID, '_', DaysSoFar, FileExtension)), 'TrialData');
 
 elseif GPC_AlreadyExist == 7
-    save(fullfile(FolderName_GPC, strcat(FileHeader, '_', variable.MouseID, FileExtension)), 'VariableString');
+    save(fullfile(FolderName, strcat(TrialData.MouseID, '_', DaysSoFar, FileExtension)), 'TrialData');
     
 end
 
 % Parent Folders
-% Humza's computer - C:\Users\Evan\Documents\HeadFixedSetup\scripts and data\fake_data\
 % Alison's computer - /Users/alisonkim/Dropbox/_ucsf/code/HeadFixedSetup/
 % Behaviour computer - C:\HeadFixedTrials\
